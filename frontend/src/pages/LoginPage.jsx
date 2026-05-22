@@ -1,12 +1,29 @@
 import { useState } from 'react';
 import { useAuth } from '../store/AuthContext';
+import { useGoogleLogin } from '@react-oauth/google';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      setError('');
+      try {
+        await loginWithGoogle(tokenResponse.access_token);
+      } catch (err) {
+        setError(err.message || 'Google Login failed. Please try again.');
+        setLoading(false);
+      }
+    },
+    onError: () => {
+      setError('Google Login Failed');
+    },
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,7 +93,7 @@ export default function LoginPage() {
               width: '100%', marginBottom: 24, fontSize: '0.9375rem',
               background: 'rgba(255,255,255,0.06)', padding: '14px 20px'
             }}
-            onClick={handleDemoLogin}
+            onClick={() => googleLogin()}
             disabled={loading}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">

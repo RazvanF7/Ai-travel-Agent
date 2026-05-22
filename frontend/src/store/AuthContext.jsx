@@ -46,6 +46,21 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const loginWithGoogle = async (access_token) => {
+    const data = await auth.googleLogin({ access_token });
+    localStorage.setItem('access_token', data.access);
+    localStorage.setItem('refresh_token', data.refresh);
+    setUser({
+      id: data.user.id,
+      email: data.user.email,
+      username: data.user.username,
+      firstName: data.user.first_name,
+      lastName: data.user.last_name,
+      preferredCurrency: 'EUR',
+    });
+    return data;
+  };
+
   const logout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -53,7 +68,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
