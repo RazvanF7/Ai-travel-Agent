@@ -1,0 +1,60 @@
+services:
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: travel_agent_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+
+  # ── Django / Daphne backend ────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: travel_agent_backend
+    env_file:
+      - .env
+    environment:
+      - DB_PATH=/app/data/db.sqlite3
+    volumes:
+      - db_data:/app/data
+      - staticfiles_data:/app/staticfiles
+      - media_data:/app/media
+    expose:
+      - "8000"
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  # ── React frontend (built + served by nginx) ───────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: travel_agent_frontend
+    expose:
+      - "80"
+    restart: unless-stopped
+
+  # ── Nginx reverse proxy ────────────────────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: travel_agent_nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - staticfiles_data:/app/staticfiles:ro
+      - media_data:/app/media:ro
+    restart: unless-stopped
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  redis_data:
+  db_data:
+  staticfiles_data:
+  media_data:
