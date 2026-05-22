@@ -12,7 +12,8 @@ export default function ChatTab({ trip }) {
   const lastTypingSent = useRef(0);
 
   const groupId = trip.group;
-  const wsUrl = `ws://localhost:8000/ws/chat/${groupId}/`;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/chat/${groupId}/`;
 
   const { send, status } = useWebSocket(wsUrl, {
     onMessage: useCallback((data) => {

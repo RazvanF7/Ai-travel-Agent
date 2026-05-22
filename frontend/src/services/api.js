@@ -1,6 +1,6 @@
 /* API Service — Centralized API client for AI Travel Hub */
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = '/api';
 
 function getToken() {
   return localStorage.getItem('access_token');
@@ -130,6 +130,7 @@ export const notifications = {
 
 /* ═══ WebSocket Helper ═══ */
 export function createWebSocket(path) {
-  const wsBase = 'ws://localhost:8000';
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsBase = `${protocol}//${window.location.host}`;
   return new WebSocket(`${wsBase}${path}`);
 }

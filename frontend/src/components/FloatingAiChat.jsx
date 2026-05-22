@@ -12,7 +12,8 @@ export default function FloatingAiChat() {
   const messagesEndRef = useRef(null);
 
   // Group ID 0 for public landing page
-  const wsUrl = `ws://localhost:8000/ws/ai/0/`;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/ai/0/`;
 
   const { send, status } = useWebSocket(wsUrl, {
     onMessage: (data) => {

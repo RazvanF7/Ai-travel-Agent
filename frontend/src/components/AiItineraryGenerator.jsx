@@ -7,7 +7,8 @@ export default function AiItineraryGenerator({ trip, onGenerated }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const textRef = useRef('');
 
-  const wsUrl = `ws://localhost:8000/ws/ai/${trip.group}/`;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/ai/${trip.group}/`;
 
   const { send, status } = useWebSocket(wsUrl, {
     onMessage: (data) => {

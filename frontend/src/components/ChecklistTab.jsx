@@ -7,7 +7,8 @@ export default function ChecklistTab({ trip }) {
   const [newItem, setNewItem] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const wsUrl = `ws://localhost:8000/ws/checklist/${trip.id}/`;
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsUrl = `${protocol}//${window.location.host}/ws/checklist/${trip.id}/`;
 
   const { send, status } = useWebSocket(wsUrl, {
     onMessage: useCallback((data) => {
