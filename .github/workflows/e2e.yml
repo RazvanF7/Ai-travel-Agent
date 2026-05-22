@@ -1,0 +1,99 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the repo
+      - uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+
+      # 3. Set up Node.js
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # 4. Install backend Python dependencies
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          python -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+      # 5. Install frontend Node dependencies
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm install
+
+      # 6. Install Playwright browsers + OS deps
+      - name: Install Playwright browsers
+        run: |
+          cd backend
+          source venv/bin/activate
+          playwright install --with-deps chromium
+
+      # 7. Set up environment variables for CI
+      - name: Create .env file
+        run: |
+          cat > .env << EOF
+          DJANGO_SECRET_KEY=ci-test-secret-key
+          DEBUG=True
+          ALLOWED_HOSTS=localhost,127.0.0.1
+          REDIS_URL=
+          CELERY_BROKER_URL=memory://
+          CELERY_RESULT_BACKEND=cache+memory://
+          GROQ_API_KEY=test
+          CORS_ALLOWED_ORIGINS=http://localhost:5173
+          GOOGLE_CLIENT_ID=test
+          GOOGLE_CLIENT_SECRET=test
+          EOF
+
+      # 8. Run Django migrations
+      - name: Run migrations
+        run: |
+          cd backend
+          source venv/bin/activate
+          python manage.py migrate
+
+      # 9. Start the backend server in the background
+      - name: Start backend server
+        run: |
+          cd backend
+          source venv/bin/activate
+          python manage.py runserver &
+
+      # 10. Start the frontend server in the background
+      - name: Start frontend server
+        run: |
+          cd frontend
+          npm run dev &
+
+      # 11. Wait for both servers to be ready
+      - name: Wait for servers
+        run: |
+          echo "Waiting for backend..."
+          timeout 30 bash -c 'until curl -s http://localhost:8000 > /dev/null 2>&1; do sleep 1; done'
+          echo "Backend is up!"
+          echo "Waiting for frontend..."
+          timeout 30 bash -c 'until curl -s http://localhost:5173 > /dev/null 2>&1; do sleep 1; done'
+          echo "Frontend is up!"
+
+      # 12. Run the E2E tests
+      - name: Run Playwright tests
+        run: |
+          cd backend
+          source venv/bin/activate
+          pytest ../e2e_tests/ -v
