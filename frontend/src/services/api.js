@@ -68,6 +68,7 @@ async function refreshToken() {
 /* ═══ Auth ═══ */
 export const auth = {
   demoLogin: (data) => request('/auth/demo-login/', { method: 'POST', body: JSON.stringify(data) }),
+  googleLogin: (accessToken) => request('/auth/google/', { method: 'POST', body: JSON.stringify({ access_token: accessToken }) }),
   getMe: () => request('/auth/me/'),
   updateMe: (data) => request('/auth/me/', { method: 'PATCH', body: JSON.stringify(data) }),
 };

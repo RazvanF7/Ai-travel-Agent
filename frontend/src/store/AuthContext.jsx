@@ -33,6 +33,17 @@ export function AuthProvider({ children }) {
 
   const login = async (email, username, firstName) => {
     const data = await auth.demoLogin({ email, username, first_name: firstName });
+    handleAuthData(data);
+    return data;
+  };
+
+  const googleLogin = async (accessToken) => {
+    const data = await auth.googleLogin(accessToken);
+    handleAuthData(data);
+    return data;
+  };
+
+  const handleAuthData = (data) => {
     localStorage.setItem('access_token', data.access);
     localStorage.setItem('refresh_token', data.refresh);
     setUser({
@@ -43,7 +54,6 @@ export function AuthProvider({ children }) {
       lastName: data.user.last_name,
       preferredCurrency: 'EUR',
     });
-    return data;
   };
 
   const logout = () => {
@@ -53,7 +63,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, googleLogin, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
