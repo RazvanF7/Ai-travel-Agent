@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { ai, readSSEStream } from '../services/api';
 
 export default function AiConcierge({ trip }) {
   const [messages, setMessages] = useState([]);
@@ -7,40 +7,7 @@ export default function AiConcierge({ trip }) {
   const [isThinking, setIsThinking] = useState(false);
   const streamRef = useRef('');
 
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws/ai/${trip.group}/`;
-
-  const { send, status } = useWebSocket(wsUrl, {
-    onMessage: (data) => {
-      if (data.type === 'ai.token') {
-        streamRef.current += data.content;
-        setMessages(prev => {
-          const updated = [...prev];
-          if (updated.length > 0 && updated[updated.length - 1].role === 'assistant' && updated[updated.length - 1].streaming) {
-            updated[updated.length - 1] = { ...updated[updated.length - 1], content: streamRef.current };
-          }
-          return updated;
-        });
-      } else if (data.type === 'ai.complete') {
-        setIsThinking(false);
-        setMessages(prev => {
-          const updated = [...prev];
-          if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
-            updated[updated.length - 1] = { ...updated[updated.length - 1], streaming: false };
-          }
-          return updated;
-        });
-      } else if (data.type === 'error') {
-        setIsThinking(false);
-        setMessages(prev => [...prev, { role: 'assistant', content: ` ${data.message}`, streaming: false }]);
-      } else if (data.type === 'status') {
-        setIsThinking(true);
-      }
-    },
-    enabled: true,
-  });
-
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() || isThinking) return;
     const question = input.trim();
     setInput('');
@@ -52,14 +19,56 @@ export default function AiConcierge({ trip }) {
       { role: 'assistant', content: '', streaming: true },
     ]);
 
-    send({ action: 'concierge', question, trip_id: trip.id });
+    setIsThinking(true);
+
+    try {
+      const response = await ai.concierge({ question, trip_id: trip.id });
+
+      await readSSEStream(response, (data) => {
+        if (data.type === 'token') {
+          streamRef.current += data.content;
+          setMessages(prev => {
+            const updated = [...prev];
+            if (updated.length > 0 && updated[updated.length - 1].role === 'assistant' && updated[updated.length - 1].streaming) {
+              updated[updated.length - 1] = { ...updated[updated.length - 1], content: streamRef.current };
+            }
+            return updated;
+          });
+        } else if (data.type === 'complete') {
+          setIsThinking(false);
+          setMessages(prev => {
+            const updated = [...prev];
+            if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
+              updated[updated.length - 1] = { ...updated[updated.length - 1], streaming: false };
+            }
+            return updated;
+          });
+        } else if (data.type === 'error') {
+          setIsThinking(false);
+          setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${data.message}`, streaming: false }]);
+        }
+      });
+
+      // Stream ended
+      setIsThinking(false);
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
+          updated[updated.length - 1] = { ...updated[updated.length - 1], streaming: false };
+        }
+        return updated;
+      });
+    } catch (err) {
+      setIsThinking(false);
+      setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${err.message}`, streaming: false }]);
+    }
   };
 
   return (
     <div className="glass-card-static" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 340px)', minHeight: 400 }}>
       <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: '1.5rem' }}></span>
+          <span style={{ fontSize: '1.5rem' }}>🤖</span>
           <div>
             <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>AI Travel Concierge</h3>
             <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
@@ -72,7 +81,7 @@ export default function AiConcierge({ trip }) {
       <div style={{ flex: 1, overflow: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {messages.length === 0 && (
           <div className="empty-state" style={{ flex: 1 }}>
-            <div className="icon"></div>
+            <div className="icon">🌍</div>
             <h3>Ask me anything about your trip</h3>
             <p>I can help with local recommendations, directions, emergency info, and travel tips</p>
             <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
@@ -115,8 +124,8 @@ export default function AiConcierge({ trip }) {
           onKeyDown={e => e.key === 'Enter' && handleSend()}
           disabled={isThinking}
         />
-        <button className="btn btn-primary" onClick={handleSend} disabled={!input.trim() || isThinking || status !== 'connected'}>
-          {isThinking ? '' : 'Ask'}
+        <button className="btn btn-primary" onClick={handleSend} disabled={!input.trim() || isThinking}>
+          {isThinking ? '⏳' : 'Ask'}
         </button>
       </div>
     </div>

@@ -10,6 +10,8 @@ class UserProfile(models.Model):
     preferred_currency = models.CharField(max_length=3, default='EUR', help_text='ISO 4217 currency code')
     avatar_url = models.URLField(blank=True, default='')
     push_token = models.TextField(blank=True, default='', help_text='Web Push subscription JSON')
+    bio = models.TextField(blank=True, default='')
+    preferences = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

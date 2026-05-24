@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useWebSocket } from '../hooks/useWebSocket';
+import { ai, readSSEStream } from '../services/api';
 
 export default function FloatingAiChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -11,40 +11,6 @@ export default function FloatingAiChat() {
   const streamRef = useRef('');
   const messagesEndRef = useRef(null);
 
-  // Group ID 0 for public landing page
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws/ai/0/`;
-
-  const { send, status } = useWebSocket(wsUrl, {
-    onMessage: (data) => {
-      if (data.type === 'ai.token') {
-        streamRef.current += data.content;
-        setMessages(prev => {
-          const updated = [...prev];
-          if (updated.length > 0 && updated[updated.length - 1].role === 'assistant' && updated[updated.length - 1].streaming) {
-            updated[updated.length - 1] = { ...updated[updated.length - 1], content: streamRef.current };
-          }
-          return updated;
-        });
-      } else if (data.type === 'ai.complete') {
-        setIsThinking(false);
-        setMessages(prev => {
-          const updated = [...prev];
-          if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
-            updated[updated.length - 1] = { ...updated[updated.length - 1], streaming: false };
-          }
-          return updated;
-        });
-      } else if (data.type === 'error') {
-        setIsThinking(false);
-        setMessages(prev => [...prev, { role: 'assistant', content: ` ${data.message}`, streaming: false }]);
-      } else if (data.type === 'status') {
-        setIsThinking(true);
-      }
-    },
-    enabled: isOpen,
-  });
-
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -55,12 +21,11 @@ export default function FloatingAiChat() {
 
   // Open the chat by default to match mockup, but allow closing
   useEffect(() => {
-    // Delay opening slightly for effect
     const timer = setTimeout(() => setIsOpen(true), 1000);
     return () => clearTimeout(timer);
   }, []);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() || isThinking) return;
     const question = input.trim();
     setInput('');
@@ -72,7 +37,49 @@ export default function FloatingAiChat() {
       { role: 'assistant', content: '', streaming: true },
     ]);
 
-    send({ action: 'concierge', question, trip_id: null });
+    setIsThinking(true);
+
+    try {
+      const response = await ai.concierge({ question, trip_id: null });
+
+      await readSSEStream(response, (data) => {
+        if (data.type === 'token') {
+          streamRef.current += data.content;
+          setMessages(prev => {
+            const updated = [...prev];
+            if (updated.length > 0 && updated[updated.length - 1].role === 'assistant' && updated[updated.length - 1].streaming) {
+              updated[updated.length - 1] = { ...updated[updated.length - 1], content: streamRef.current };
+            }
+            return updated;
+          });
+        } else if (data.type === 'complete') {
+          setIsThinking(false);
+          setMessages(prev => {
+            const updated = [...prev];
+            if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
+              updated[updated.length - 1] = { ...updated[updated.length - 1], streaming: false };
+            }
+            return updated;
+          });
+        } else if (data.type === 'error') {
+          setIsThinking(false);
+          setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${data.message}`, streaming: false }]);
+        }
+      });
+
+      // Stream ended
+      setIsThinking(false);
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
+          updated[updated.length - 1] = { ...updated[updated.length - 1], streaming: false };
+        }
+        return updated;
+      });
+    } catch (err) {
+      setIsThinking(false);
+      setMessages(prev => [...prev, { role: 'assistant', content: `❌ ${err.message}`, streaming: false }]);
+    }
   };
 
   if (!isOpen) {
@@ -134,7 +141,7 @@ export default function FloatingAiChat() {
             onKeyDown={e => e.key === 'Enter' && handleSend()}
             disabled={isThinking}
           />
-          <button className="btn-send" onClick={handleSend} disabled={!input.trim() || isThinking || status !== 'connected'}>
+          <button className="btn-send" onClick={handleSend} disabled={!input.trim() || isThinking}>
             ↑
           </button>
         </div>

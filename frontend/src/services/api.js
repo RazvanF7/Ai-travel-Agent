@@ -65,6 +65,47 @@ async function refreshToken() {
   }
 }
 
+/**
+ * Make a streaming SSE request (for AI endpoints).
+ * Returns a Response object — caller reads the stream.
+ */
+async function streamRequest(endpoint, body) {
+  const token = getToken();
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const response = await fetch(`${API_BASE}${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (response.status === 401) {
+    const refreshed = await refreshToken();
+    if (refreshed) {
+      headers.Authorization = `Bearer ${getToken()}`;
+      return fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+      });
+    }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    window.location.href = '/login';
+    throw new Error('Session expired');
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || error.detail || `API Error: ${response.status}`);
+  }
+
+  return response;
+}
+
 /* ═══ Auth ═══ */
 export const auth = {
   googleLogin: (data) => request('/auth/google/', { method: 'POST', body: JSON.stringify(data) }),
@@ -102,11 +143,16 @@ export const itinerary = {
 /* ═══ Chat ═══ */
 export const chat = {
   history: (groupId) => request(`/chat/${groupId}/messages/`),
+  poll: (groupId, since) => request(`/chat/${groupId}/messages/?since=${encodeURIComponent(since)}`),
+  send: (groupId, content) => request(`/chat/${groupId}/send/`, { method: 'POST', body: JSON.stringify({ content }) }),
 };
 
 /* ═══ Checklist ═══ */
 export const checklists = {
   list: (tripId) => request(`/checklists/${tripId}/`),
+  create: (tripId, data) => request(`/checklists/${tripId}/`, { method: 'POST', body: JSON.stringify(data) }),
+  toggle: (tripId, itemId) => request(`/checklists/${tripId}/${itemId}/toggle/`, { method: 'POST' }),
+  remove: (tripId, itemId) => request(`/checklists/${tripId}/${itemId}/delete/`, { method: 'DELETE' }),
 };
 
 /* ═══ Finance ═══ */
@@ -120,6 +166,8 @@ export const finance = {
 /* ═══ AI ═══ */
 export const ai = {
   status: () => request('/ai/status/'),
+  generateItinerary: (data) => streamRequest('/ai/generate-itinerary/', data),
+  concierge: (data) => streamRequest('/ai/concierge/', data),
 };
 
 /* ═══ Notifications ═══ */
@@ -129,9 +177,37 @@ export const notifications = {
   updatePreference: (data) => request('/notifications/preferences/', { method: 'POST', body: JSON.stringify(data) }),
 };
 
-/* ═══ WebSocket Helper ═══ */
-export function createWebSocket(path) {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsBase = `${protocol}//${window.location.host}`;
-  return new WebSocket(`${wsBase}${path}`);
+/**
+ * Parse SSE stream from a fetch Response.
+ * Calls onEvent(eventData) for each parsed SSE event.
+ * Returns when the stream ends.
+ */
+export async function readSSEStream(response, onEvent) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    let currentData = null;
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        currentData = line.slice(6);
+      } else if (line === '' && currentData !== null) {
+        try {
+          const parsed = JSON.parse(currentData);
+          onEvent(parsed);
+        } catch (e) {
+          console.error('SSE parse error:', e);
+        }
+        currentData = null;
+      }
+    }
+  }
 }

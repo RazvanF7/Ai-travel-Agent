@@ -1,48 +1,72 @@
 import { useState, useEffect, useCallback } from 'react';
 import { checklists as checklistApi } from '../services/api';
-import { useWebSocket } from '../hooks/useWebSocket';
+
+const POLL_INTERVAL = 10000; // 10 seconds
 
 export default function ChecklistTab({ trip }) {
   const [items, setItems] = useState([]);
   const [newItem, setNewItem] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws/checklist/${trip.id}/`;
-
-  const { send, status } = useWebSocket(wsUrl, {
-    onMessage: useCallback((data) => {
-      if (data.type === 'checklist.update') {
-        if (data.action === 'added') {
-          setItems(prev => [...prev, data.item]);
-        } else if (data.action === 'toggled') {
-          setItems(prev => prev.map(i => i.id === data.item.id ? { ...i, ...data.item } : i));
-        } else if (data.action === 'deleted') {
-          setItems(prev => prev.filter(i => i.id !== data.item.id));
-        }
-      }
-    }, []),
-    enabled: true,
-  });
-
-  useEffect(() => {
-    checklistApi.list(trip.id).then(data => {
-      setItems(Array.isArray(data) ? data : data.results || []);
-    }).catch(() => {}).finally(() => setLoading(false));
+  // Fetch items
+  const fetchItems = useCallback(() => {
+    checklistApi.list(trip.id)
+      .then(data => {
+        setItems(Array.isArray(data) ? data : data.results || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [trip.id]);
 
-  const handleAdd = () => {
+  // Initial load
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+
+  // Poll for updates from other users
+  useEffect(() => {
+    const interval = setInterval(fetchItems, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchItems]);
+
+  const handleAdd = async () => {
     if (!newItem.trim()) return;
-    send({ action: 'add', title: newItem.trim() });
+    const title = newItem.trim();
     setNewItem('');
+
+    try {
+      const item = await checklistApi.create(trip.id, { title });
+      setItems(prev => [...prev, item]);
+    } catch (err) {
+      console.error('Failed to add item:', err);
+    }
   };
 
-  const handleToggle = (itemId) => {
-    send({ action: 'toggle', item_id: itemId });
+  const handleToggle = async (itemId) => {
+    // Optimistic update
+    setItems(prev => prev.map(i =>
+      i.id === itemId ? { ...i, is_completed: !i.is_completed } : i
+    ));
+
+    try {
+      const updated = await checklistApi.toggle(trip.id, itemId);
+      setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
+    } catch (err) {
+      console.error('Failed to toggle item:', err);
+      fetchItems(); // Revert on error
+    }
   };
 
-  const handleDelete = (itemId) => {
-    send({ action: 'delete', item_id: itemId });
+  const handleDelete = async (itemId) => {
+    // Optimistic update
+    setItems(prev => prev.filter(i => i.id !== itemId));
+
+    try {
+      await checklistApi.remove(trip.id, itemId);
+    } catch (err) {
+      console.error('Failed to delete item:', err);
+      fetchItems(); // Revert on error
+    }
   };
 
   const completedCount = items.filter(i => i.is_completed).length;
@@ -77,7 +101,7 @@ export default function ChecklistTab({ trip }) {
           onChange={e => setNewItem(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
         />
-        <button className="btn btn-primary btn-sm" onClick={handleAdd} disabled={!newItem.trim() || status !== 'connected'}>
+        <button className="btn btn-primary btn-sm" onClick={handleAdd} disabled={!newItem.trim()}>
           Add
         </button>
       </div>
@@ -134,7 +158,7 @@ export default function ChecklistTab({ trip }) {
                 )}
               </div>
               <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(item.id)} style={{ padding: '4px 8px', color: 'var(--text-tertiary)' }}>
-                
+                ✕
               </button>
             </div>
           ))}

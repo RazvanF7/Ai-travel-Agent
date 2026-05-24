@@ -16,6 +16,7 @@ class ChecklistItem(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_checklist_items')
     order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['order', 'created_at']

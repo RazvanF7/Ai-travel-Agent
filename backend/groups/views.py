@@ -1,80 +1,148 @@
-from rest_framework import generics, permissions, status
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
+import json
+from django.http import JsonResponse
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
 from .models import Group, GroupMembership
-from .serializers import GroupSerializer, GroupCreateSerializer, JoinGroupSerializer
+from accounts.auth import jwt_required
 
+def serialize_group_membership(membership):
+    return {
+        'id': membership.id,
+        'user': {
+            'id': membership.user.id,
+            'username': membership.user.username,
+            'email': membership.user.email,
+            'first_name': membership.user.first_name,
+            'last_name': membership.user.last_name,
+        },
+        'role': membership.role,
+        'joined_at': membership.joined_at.isoformat(),
+    }
 
-class GroupListCreateView(generics.ListCreateAPIView):
+def serialize_group(group, include_memberships=True):
+    data = {
+        'id': group.id,
+        'name': group.name,
+        'created_by': {
+            'id': group.created_by.id,
+            'username': group.created_by.username,
+        } if group.created_by else None,
+        'invite_code': group.invite_code,
+        'created_at': group.created_at.isoformat(),
+    }
+    if include_memberships:
+        data['memberships'] = [serialize_group_membership(m) for m in group.memberships.all()]
+    return data
+
+@method_decorator(jwt_required, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
+class GroupListCreateView(View):
     """List user's groups or create a new group (US-002)."""
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_serializer_class(self):
-        if self.request.method == 'POST':
-            return GroupCreateSerializer
-        return GroupSerializer
-
-    def get_queryset(self):
-        return Group.objects.filter(
-            memberships__user=self.request.user
+    
+    def get(self, request, *args, **kwargs):
+        qs = Group.objects.filter(
+            memberships__user=request.user
         ).prefetch_related('memberships__user')
+        
+        data = [serialize_group(group) for group in qs]
+        return JsonResponse(data, safe=False)
 
-    def perform_create(self, serializer):
-        group = serializer.save(created_by=self.request.user)
+    def post(self, request, *args, **kwargs):
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+            
+        group = Group.objects.create(
+            name=data.get('name', ''),
+            created_by=request.user
+        )
+        
         # Creator is automatically admin (US-002 AC-1)
         GroupMembership.objects.create(
-            user=self.request.user,
+            user=request.user,
             group=group,
             role='admin'
         )
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        
         # Return full group data
-        group = Group.objects.prefetch_related('memberships__user').get(
-            id=serializer.instance.id
-        )
-        return Response(
-            GroupSerializer(group).data,
-            status=status.HTTP_201_CREATED
-        )
+        group = Group.objects.prefetch_related('memberships__user').get(id=group.id)
+        return JsonResponse(serialize_group(group), status=201)
 
 
-class GroupDetailView(generics.RetrieveUpdateDestroyAPIView):
+@method_decorator(jwt_required, name='dispatch')
+@method_decorator(csrf_exempt, name='dispatch')
+class GroupDetailView(View):
     """Get, update, or delete a group (admin only for updates)."""
-    serializer_class = GroupSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_group_or_404(self, request, pk):
+        return get_object_or_404(
+            Group.objects.filter(memberships__user=request.user).prefetch_related('memberships__user'),
+            pk=pk
+        )
 
-    def get_queryset(self):
-        return Group.objects.filter(
-            memberships__user=self.request.user
-        ).prefetch_related('memberships__user')
+    def get(self, request, pk, *args, **kwargs):
+        group = self.get_group_or_404(request, pk)
+        return JsonResponse(serialize_group(group))
+
+    def put(self, request, pk, *args, **kwargs):
+        group = self.get_group_or_404(request, pk)
+        
+        # Check if admin
+        membership = GroupMembership.objects.filter(group=group, user=request.user).first()
+        if not membership or membership.role != 'admin':
+            return JsonResponse({'error': 'Only admins can update the group.'}, status=403)
+            
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({'error': 'Invalid JSON'}, status=400)
+            
+        if 'name' in data: group.name = data['name']
+        group.save()
+        
+        return JsonResponse(serialize_group(group))
+
+    def delete(self, request, pk, *args, **kwargs):
+        group = self.get_group_or_404(request, pk)
+        
+        # Check if admin
+        membership = GroupMembership.objects.filter(group=group, user=request.user).first()
+        if not membership or membership.role != 'admin':
+            return JsonResponse({'error': 'Only admins can delete the group.'}, status=403)
+            
+        group.delete()
+        return JsonResponse({}, status=204)
 
 
-@api_view(['POST'])
-@permission_classes([permissions.IsAuthenticated])
+@csrf_exempt
+@jwt_required
 def join_group(request):
     """Join a group via invite code (US-003)."""
-    serializer = JoinGroupSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-
-    code = serializer.validated_data['invite_code'].upper()
-
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
     try:
-        group = Group.objects.get(invite_code=code)
+        data = json.loads(request.body)
+        invite_code = data.get('invite_code', '').upper()
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+        
+    try:
+        group = Group.objects.get(invite_code=invite_code)
     except Group.DoesNotExist:
-        return Response(
+        return JsonResponse(
             {'error': 'Invalid invite code. Please check and try again.'},
-            status=status.HTTP_404_NOT_FOUND
+            status=404
         )
 
     # Check if already a member (US-003 AC-3)
     if GroupMembership.objects.filter(user=request.user, group=group).exists():
-        return Response(
+        return JsonResponse(
             {'error': 'You are already in this group.'},
-            status=status.HTTP_400_BAD_REQUEST
+            status=400
         )
 
     # Create membership (US-003 AC-1)
@@ -101,7 +169,7 @@ def join_group(request):
     except Exception:
         pass  # Don't fail the join if notification fails
 
-    group_data = GroupSerializer(
+    group_data = serialize_group(
         Group.objects.prefetch_related('memberships__user').get(id=group.id)
-    ).data
-    return Response(group_data, status=status.HTTP_200_OK)
+    )
+    return JsonResponse(group_data, status=200)
