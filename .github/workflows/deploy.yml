@@ -26,8 +26,7 @@ jobs:
           sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=yes \
             $VPS_USER@$VPS_HOST << 'EOF'
               set -e
-              ls
-              cd /Ai-travel-Agent
+              cd Ai-travel-Agent
               git pull origin rebase
               docker compose pull || true
               docker compose up -d --build
