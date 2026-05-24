@@ -25,13 +25,18 @@ def serialize_itinerary_item(item):
     }
 
 def serialize_trip(trip, include_itinerary=True):
+    def _date(val):
+        if val is None:
+            return None
+        return val.isoformat() if hasattr(val, 'isoformat') else str(val)
+
     data = {
         'id': trip.id,
         'group': trip.group.id,
         'description': trip.description,
         'destination': trip.destination,
-        'start_date': trip.start_date.isoformat() if trip.start_date else None,
-        'end_date': trip.end_date.isoformat() if trip.end_date else None,
+        'start_date': _date(trip.start_date),
+        'end_date': _date(trip.end_date),
         'budget': str(trip.budget) if trip.budget else None,
         'currency': trip.currency,
         'duration_days': trip.duration_days,

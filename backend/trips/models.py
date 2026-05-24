@@ -19,7 +19,16 @@ class Trip(models.Model):
 
     @property
     def duration_days(self):
-        return (self.end_date - self.start_date).days + 1
+        from datetime import date
+        start = self.start_date
+        end = self.end_date
+        
+        if isinstance(start, str):
+            start = date.fromisoformat(start[:10])
+        if isinstance(end, str):
+            end = date.fromisoformat(end[:10])
+            
+        return (end - start).days + 1
 
     class Meta:
         ordering = ['-start_date']
