@@ -48,6 +48,95 @@ def _sse_stream(async_gen):
         yield f"event: {event_type}\ndata: {data}\n\n"
 
 
+def _save_itinerary_and_message(trip_id, destination, activities):
+    """Synchronously save the generated itinerary items and create a chat message.
+
+    Runs inside a transaction. Deletes any pre-existing itinerary items for the trip.
+    """
+    from django.db import transaction
+    from trips.models import Trip, ItineraryItem
+    from chat.models import Message
+    from django.contrib.auth.models import User
+    import logging
+    import re
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        with transaction.atomic():
+            # Clear old itinerary items for this trip (US-005 AC-3 override)
+            ItineraryItem.objects.filter(trip_id=trip_id).delete()
+
+            # Create new items
+            for activity in activities:
+                try:
+                    # Clean/validate day and order
+                    try:
+                        day = int(activity.get('day', 1))
+                    except (ValueError, TypeError):
+                        day = 1
+
+                    try:
+                        order = int(activity.get('order', 0))
+                    except (ValueError, TypeError):
+                        order = 0
+
+                    # Clean/validate duration
+                    duration = activity.get('duration_minutes')
+                    if duration is not None:
+                        try:
+                            duration = int(duration)
+                        except (ValueError, TypeError):
+                            duration = None
+
+                    # Clean/validate start_time
+                    start_time = activity.get('start_time')
+                    if start_time == '':
+                        start_time = None
+                    elif start_time:
+                        start_time_str = str(start_time).strip()
+                        # If H:MM, pad to 0H:MM
+                        if re.match(r'^\d:\d{2}$', start_time_str):
+                            start_time_str = f"0{start_time_str}"
+                        # Check if it matches HH:MM or HH:MM:SS
+                        if not re.match(r'^\d{2}:\d{2}(:\d{2})?$', start_time_str):
+                            start_time_str = None
+                        start_time = start_time_str
+
+                    ItineraryItem.objects.create(
+                        trip_id=trip_id,
+                        day=day,
+                        order=order,
+                        title=activity.get('title', 'Activity')[:255],
+                        description=activity.get('description', ''),
+                        location=activity.get('location', '')[:255],
+                        start_time=start_time,
+                        duration_minutes=duration,
+                    )
+                except Exception as item_err:
+                    logger.error(f"Error saving activity item {activity}: {item_err}", exc_info=True)
+                    continue
+
+            # Create system chat message
+            try:
+                bot_user, _ = User.objects.get_or_create(
+                    username='pathfinder',
+                    defaults={'first_name': 'Pathfinder', 'email': 'pathfinder@aitravelhub.com'}
+                )
+                trip_obj = Trip.objects.get(id=trip_id)
+                Message.objects.create(
+                    group_id=trip_obj.group_id,
+                    sender=bot_user,
+                    content=f'🗺️ Pathfinder generated a new itinerary for {destination}. Tap to view.',
+                    message_type='ai',
+                )
+            except Exception as msg_err:
+                logger.error(f"Error creating chat message: {msg_err}", exc_info=True)
+
+    except Exception as trans_err:
+        logger.error(f"Transaction failed for itinerary generation: {trans_err}", exc_info=True)
+
+
 @csrf_exempt
 @jwt_required
 def generate_itinerary(request):
@@ -83,6 +172,7 @@ def generate_itinerary(request):
     trip_id = body.get('trip_id')
 
     from .pathfinder import stream_itinerary
+    from asgiref.sync import sync_to_async
 
     async def _stream():
         async for chunk in stream_itinerary(
@@ -92,41 +182,9 @@ def generate_itinerary(request):
 
             # Save itinerary items on completion (US-005 AC-3)
             if chunk['type'] == 'complete' and trip_id and chunk.get('activities'):
-                from trips.models import ItineraryItem
-                for activity in chunk['activities']:
-                    try:
-                        ItineraryItem.objects.create(
-                            trip_id=trip_id,
-                            day=activity.get('day', 1),
-                            order=activity.get('order', 0),
-                            title=activity.get('title', 'Activity'),
-                            description=activity.get('description', ''),
-                            location=activity.get('location', ''),
-                            start_time=activity.get('start_time'),
-                            duration_minutes=activity.get('duration_minutes'),
-                        )
-                    except Exception:
-                        continue
-
-                # Post system message to chat (US-007 AC-5)
-                try:
-                    from chat.models import Message
-                    from django.contrib.auth.models import User
-                    bot_user = User.objects.get_or_create(
-                        username='pathfinder',
-                        defaults={'first_name': 'Pathfinder', 'email': 'pathfinder@aitravelhub.com'}
-                    )[0]
-                    # Find group from trip
-                    from trips.models import Trip
-                    trip_obj = Trip.objects.get(id=trip_id)
-                    Message.objects.create(
-                        group_id=trip_obj.group_id,
-                        sender=bot_user,
-                        content=f'🗺️ Pathfinder generated a new itinerary for {destination}. Tap to view.',
-                        message_type='ai',
-                    )
-                except Exception:
-                    pass
+                await sync_to_async(_save_itinerary_and_message)(
+                    trip_id, destination, chunk['activities']
+                )
 
     response = StreamingHttpResponse(
         _sse_stream(_stream()),
