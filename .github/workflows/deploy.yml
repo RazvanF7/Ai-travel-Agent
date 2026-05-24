@@ -9,8 +9,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install SSH client
-        run: sudo apt-get update && sudo apt-get install -y openssh-client
+      - name: Install SSH tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssh-client sshpass
 
       - name: Add VPS to known_hosts
         run: |
@@ -26,9 +28,22 @@ jobs:
           sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=yes \
             $VPS_USER@$VPS_HOST << 'EOF'
               set -e
+
               cd Ai-travel-Agent
-              git pull origin rebase
+
+              echo "Force syncing repo..."
+
+              git fetch origin
+              git reset --hard origin/rebase
+              git clean -fd
+
+              echo "Rebuilding containers..."
+
+              docker compose down
               docker compose pull || true
-              docker compose up -d --build
-              docker image prune -f
+              docker compose up -d --build --force-recreate
+
+              echo "Cleaning unused images..."
+
+              docker image prune -af
           EOF
