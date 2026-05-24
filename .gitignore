@@ -3,6 +3,7 @@
 .vscode/
 .idea/
 *.log
+migration_guide.md
 
 # Environment Variables
 .env

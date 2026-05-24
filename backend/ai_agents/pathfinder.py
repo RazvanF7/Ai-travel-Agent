@@ -72,10 +72,13 @@ async def stream_itinerary(destination, duration_days, budget=None, currency='EU
     Yields token chunks as they arrive.
     """
     try:
-        from groq import AsyncGroq
+        from openai import AsyncOpenAI
 
-        client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-        model = settings.GROQ_MODEL
+        client = AsyncOpenAI(
+            base_url=settings.LLM_BASE_URL,
+            api_key=settings.LLM_API_KEY,
+        )
+        model = settings.LLM_MODEL
 
         user_prompt = generate_itinerary_prompt(
             destination, duration_days, budget, currency, preferences
