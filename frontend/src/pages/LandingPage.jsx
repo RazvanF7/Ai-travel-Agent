@@ -36,7 +36,7 @@ export default function LandingPage() {
 
         <div className="hero-content">
           <h1 className="hero-title">
-            Your Personal AI Travel Agent.<br />
+            Your Personal AI Travel Agentt.<br />
             Effortlessly Plan & Book Your Next Journey.
           </h1>
 
