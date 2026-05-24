@@ -1,149 +1,147 @@
-# SQLite to MongoDB Online & Groq to Hostinger LLM Migration Guide
+# Migration Guide: Groq AI → Self-Hosted Ollama on RunPod
 
-This guide details the exact steps and code modifications required to:
-1. Migrate the Django database from **SQLite** to **MongoDB Atlas (Online)**.
-2. Migrate the LLM integration from **Groq** to a self-hosted LLM running on **Hostinger Cloud**.
+This guide walks you through every step to replace the Groq cloud API in this project with a
+self-hosted LLM running inside an **Ollama** container on **RunPod.com**.
+
+The migration touches exactly **5 files** in the rebased codebase:
+
+| File | Change |
+|---|---|
+| `backend/requirements.txt` | Swap `groq` → `openai` |
+| `backend/config/settings.py` | Swap Groq settings → Ollama/OpenAI-compat settings |
+| `backend/ai_agents/concierge.py` | Swap `AsyncGroq` → `AsyncOpenAI` |
+| `backend/ai_agents/pathfinder.py` | Swap `AsyncGroq` → `AsyncOpenAI` |
+| `.env` | Swap `GROQ_API_KEY` → `OLLAMA_*` variables |
+
+> [!NOTE]
+> Ollama exposes an **OpenAI-compatible REST API** at `/v1/`. That means the streaming
+> interface (`chat.completions.create(stream=True)`) works exactly the same way — the only
+> things that change are the `base_url`, `api_key`, and `model` name. No logic changes required.
 
 ---
 
-## Part 1: Migrating from SQLite to MongoDB Online (Atlas)
+## Part 1 — Deploy Ollama on RunPod
 
-Django is traditionally built for SQL databases. To use MongoDB as the primary database backend, the officially supported [django-mongodb-backend](https://github.com/mongodb/django-mongodb-backend) package is recommended. It works with Django 5.x by translating Django ORM queries into MongoDB aggregation pipelines.
+### 1.1 Choose a Pod Template
 
-### 1. Set Up MongoDB Atlas
-1. Sign up/log in to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
-2. Create a new Free/Shared Cluster.
-3. In **Network Access**, whitelist your IP addresses (or `0.0.0.0/0` if deploying to a dynamic environment like Hostinger, though restrict this where possible).
-4. In **Database Access**, create a database user and password.
-5. Go to **Database** -> **Connect** -> **Drivers**, select **Python**, and copy the Connection URI. It will look like this:
-   ```text
-   mongodb+srv://<username>:<password>@cluster0.xxxx.mongodb.net/?retryWrites=true&w=majority
+1. Go to [runpod.io](https://www.runpod.io) and log in.
+2. Click **+ Deploy** → **GPU Pod**.
+3. In the template search box type **`ollama`** — RunPod has an official Ollama template.
+   If you don't find it, click **Custom Template** and use the Docker image:
    ```
+   ollama/ollama:latest
+   ```
+4. Pick a GPU. For `llama3.1:8b` (the model this project was using on Groq) a good balance is:
+   | GPU | VRAM | Fits model? | Cost |
+   |---|---|---|---|
+   | RTX 3090 | 24 GB | ✅ comfortably | ~$0.44/hr |
+   | RTX 4090 | 24 GB | ✅ fast | ~$0.74/hr |
+   | A40 | 48 GB | ✅ + room for larger | ~$0.79/hr |
 
-### 2. Update Python Dependencies
-Add `django-mongodb-backend` (matching your Django 5.1 version) and `dnspython` (required to parse `mongodb+srv://` URIs) to your `backend/requirements.txt`.
+   For **testing/development** you can even use a **Secure Cloud** Spot instance to cut costs.
 
-Modify [requirements.txt](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-travel-Agent/backend/requirements.txt):
-```diff
- django-cors-headers>=4.4,<5.0
- django-allauth[socialaccount]>=65.0,<66.0
- dj-rest-auth[with_social]>=7.0,<8.0
- djangorestframework-simplejwt>=5.3,<6.0
- channels>=4.1,<5.0
- channels-redis>=4.2,<5.0
- celery>=5.4,<6.0
- redis>=5.0,<6.0
--groq>=0.9,<1.0
-+django-mongodb-backend>=5.1,<5.2
-+dnspython>=2.0,<3.0
-+openai>=1.0,<2.0
- pywebpush>=2.0,<3.0
+### 1.2 Configure the Pod
+
+Under **Container Configuration**:
+
+| Setting | Value |
+|---|---|
+| Container Image | `ollama/ollama:latest` |
+| Expose HTTP Port | `11434` |
+| Container Disk | 20 GB (enough for an 8B model) |
+| Volume Disk | 20 GB (mount at `/root/.ollama` to persist model weights) |
+
+Under **Environment Variables** (optional but recommended):
+
 ```
-> [!NOTE]
-> We also added `openai` here for the self-hosted LLM setup in Part 2.
-
-### 3. Configure Environment Variables
-Update your environment files with the MongoDB credentials.
-
-Add to [.env](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-travel-Agent/.env) and [.env.example](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-travel-Agent/.env.example):
-```ini
-# MongoDB Configuration
-MONGODB_URI="mongodb+srv://<username>:<password>@cluster0.xxxx.mongodb.net/?retryWrites=true&w=majority"
-MONGODB_NAME="ai_travel_agent_db"
-```
-
-### 4. Update Django Settings
-Modify the `DATABASES` configuration to use the MongoDB backend engine.
-
-Modify [settings.py](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-travel-Agent/backend/config/settings.py):
-```diff
- # ──────────────────────────────────────────────
- # Database
- # ──────────────────────────────────────────────
--DATABASES = {
--    'default': {
--        'ENGINE': 'django.db.backends.sqlite3',
--        'NAME': BASE_DIR / 'db.sqlite3',
--    }
--}
-+DATABASES = {
-+    'default': {
-+        'ENGINE': 'django_mongodb_backend',
-+        'HOST': os.getenv('MONGODB_URI', 'mongodb://localhost:27017'),
-+        'NAME': os.getenv('MONGODB_NAME', 'ai_travel_agent_db'),
-+    }
-+}
+OLLAMA_HOST=0.0.0.0
+OLLAMA_ORIGINS=*
 ```
 
 > [!IMPORTANT]
-> If you want to use MongoDB's native 12-byte `ObjectId` instead of standard Django integer auto-increment keys for your models, update the default auto-field setting in [settings.py](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-travel-Agent/backend/config/settings.py):
-> ```python
-> DEFAULT_AUTO_FIELD = 'django_mongodb_backend.fields.ObjectIdAutoField'
-> ```
+> Set `OLLAMA_HOST=0.0.0.0` so Ollama listens on all interfaces — otherwise it will only
+> bind to `127.0.0.1` and the RunPod proxy won't be able to reach it.
 
-### 5. Apply Migrations
-Because we are switching to a new database (MongoDB Atlas), you must run migrations to set up the collection structures:
-```powershell
-python backend/manage.py migrate
+Click **Deploy**.
+
+### 1.3 Get Your RunPod Endpoint URL
+
+Once the pod is **Running**:
+
+1. Click the pod name → **Connect** tab.
+2. You will see an **HTTP Service** entry for port `11434`. It looks like:
+   ```
+   https://<pod-id>-11434.proxy.runpod.net
+   ```
+   Copy this URL — it is your `OLLAMA_BASE_URL`.
+
+### 1.4 Pull the Model
+
+RunPod gives you a **Web Terminal**. Open it and run:
+
+```bash
+# Pull Llama 3.1 8B (same family as the Groq llama-3.1-8b-instant model)
+ollama pull llama3.1:8b
+
+# Verify it loaded correctly
+ollama list
 ```
+
+Wait for the download to complete (≈4.7 GB). The model is now cached in your volume.
+
+> [!TIP]
+> If you want a **smaller/faster** model for development, try `llama3.2:3b` (≈2 GB).
+> For **higher quality**, try `llama3.1:70b` but you'll need an A100 (80 GB VRAM).
 
 ---
 
-## Part 2: Migrating from Groq to a Cloud LLM on Hostinger
+## Part 2 — Update the Codebase
 
-To host your own LLM on Hostinger Cloud (usually on a VPS), you will need a lightweight inference framework that provides an OpenAI-compatible API.
+### 2.1 `backend/requirements.txt`
 
-### 1. Setup options for Hostinger VPS
-Hostinger VPS packages run Linux (usually Ubuntu). You have two main routes:
-1. **Ollama (Recommended for ease & CPUs/GPUs)**: Extremely simple to set up and runs models like `Llama-3.1-8b` efficiently.
-2. **vLLM (Recommended for high performance with GPU)**: Fast throughput but requires a VPS with dedicated GPU resources.
+Remove the `groq` SDK and replace it with the `openai` SDK (which Ollama is compatible with).
 
-#### To run Ollama on your Hostinger VPS:
-1. SSH into your Hostinger VPS.
-2. Install Ollama:
-   ```bash
-   curl -fsSL https://ollama.com/install.sh | sh
-   ```
-3. Pull your target model (e.g., Llama 3.1 8B):
-   ```bash
-   ollama pull llama3.1
-   ```
-4. By default, Ollama binds to `127.0.0.1:11434`. To allow connections from your Django backend, modify the Ollama systemd service environment to expose port `11434` (`OLLAMA_HOST=0.0.0.0`).
-5. Ensure your Hostinger firewall allows traffic to port `11434` (only whitelist your Django backend's IP for security).
-
-### 2. Configure Environment Variables
-Add variables to manage connection credentials for your self-hosted LLM.
-
-Add to [.env](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-travel-Agent/.env) and [.env.example](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-travel-Agent/.env.example):
-```ini
-# Self-Hosted Cloud LLM (Hostinger)
-LLM_API_BASE_URL="http://<your-hostinger-vps-ip>:11434/v1"
-LLM_API_KEY="your-optional-api-key-or-any-string"
-LLM_MODEL_NAME="llama3.1"
+```diff
+ Django>=5.1,<5.2
+ PyJWT>=2.8,<3.0
+ django-cors-headers>=4.4,<5.0
+ celery>=5.4,<6.0
+ redis>=5.0,<6.0
+-groq>=0.9,<1.0
++openai>=1.0,<2.0
+ pywebpush>=2.0,<3.0
+ py-vapid>=1.9,<2.0
+ python-dotenv>=1.0,<2.0
+ Pillow>=10.0,<11.0
+ requests>=2.32,<3.0
+ gunicorn>=22.0,<23.0
 ```
 
-### 3. Update Django Settings
-Update [settings.py](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-travel-Agent/backend/config/settings.py) to read the new self-hosted LLM configuration:
+### 2.2 `backend/config/settings.py`
+
+Replace the Groq section (lines 119–122) with Ollama-compatible settings:
+
 ```diff
  # ──────────────────────────────────────────────
- # AI / Groq
+-# AI / Groq
++# AI / Ollama (self-hosted via RunPod)
  # ──────────────────────────────────────────────
 -GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 -GROQ_MODEL = 'llama-3.1-8b-instant'
-+LLM_API_BASE_URL = os.getenv('LLM_API_BASE_URL', 'http://localhost:11434/v1')
-+LLM_API_KEY = os.getenv('LLM_API_KEY', 'not-needed')
-+LLM_MODEL_NAME = os.getenv('LLM_MODEL_NAME', 'llama3.1')
++LLM_BASE_URL  = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434/v1')
++LLM_API_KEY   = os.getenv('OLLAMA_API_KEY', 'ollama')   # Ollama ignores this; required by the openai SDK
++LLM_MODEL     = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
 ```
 
-### 4. Update the Agents Code
-We will change `AsyncGroq` client to `AsyncOpenAI` client. Since both Groq and Ollama/vLLM use standard OpenAI-compatible JSON formats, the parameters remain exactly the same.
+### 2.3 `backend/ai_agents/pathfinder.py`
 
-#### A. Pathfinder Agent
-Modify [pathfinder.py](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-travel-Agent/backend/ai_agents/pathfinder.py):
+The `stream_itinerary` function imports `AsyncGroq` — replace it with `AsyncOpenAI`.
+
 ```diff
  async def stream_itinerary(destination, duration_days, budget=None, currency='EUR', preferences=''):
      """
-     Stream itinerary generation from Gemini (US-005 AC-2).
+-    Stream itinerary generation from Gemini (US-005 AC-2).
++    Stream itinerary generation from self-hosted Ollama (US-005 AC-2).
      Yields token chunks as they arrive.
      """
      try:
@@ -154,33 +152,34 @@ Modify [pathfinder.py](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-tr
 +        from openai import AsyncOpenAI
 +
 +        client = AsyncOpenAI(
++            base_url=settings.LLM_BASE_URL,
 +            api_key=settings.LLM_API_KEY,
-+            base_url=settings.LLM_API_BASE_URL
 +        )
-+        model = settings.LLM_MODEL_NAME
++        model = settings.LLM_MODEL
  
          user_prompt = generate_itinerary_prompt(
-             destination, duration_days, budget, currency, preferences
-         )
- 
-         messages = [
-             {"role": "system", "content": ITINERARY_SYSTEM_PROMPT},
-             {"role": "user", "content": user_prompt}
-         ]
- 
-         stream = await client.chat.completions.create(
-             model=model,
-             messages=messages,
-             stream=True,
-         )
 ```
 
-#### B. Concierge Agent
-Modify [concierge.py](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-travel-Agent/backend/ai_agents/concierge.py):
+Also update the module docstring at the top of the file:
+
+```diff
+ """
+-Pathfinder Agent — AI-Generated Itinerary (US-005).
+-Uses Groq Llama 3 to generate a full day-by-day itinerary.
++Pathfinder Agent — AI-Generated Itinerary (US-005).
++Uses a self-hosted Ollama LLM (via RunPod) to generate a full day-by-day itinerary.
+ """
+```
+
+### 2.4 `backend/ai_agents/concierge.py`
+
+The `stream_concierge_response` function imports `AsyncGroq` — replace it with `AsyncOpenAI`.
+
 ```diff
  async def stream_concierge_response(question, trip=None, recent_messages=None):
      """
-     Stream concierge response from Gemini (US-013 AC-1).
+-    Stream concierge response from Gemini (US-013 AC-1).
++    Stream concierge response from self-hosted Ollama (US-013 AC-1).
      Yields token chunks as they arrive.
      """
      try:
@@ -191,24 +190,167 @@ Modify [concierge.py](file:///c:/Users/stefa/OneDrive/Desktop/travelagent/Ai-tra
 +        from openai import AsyncOpenAI
 +
 +        client = AsyncOpenAI(
++            base_url=settings.LLM_BASE_URL,
 +            api_key=settings.LLM_API_KEY,
-+            base_url=settings.LLM_API_BASE_URL
 +        )
-+        model = settings.LLM_MODEL_NAME
++        model = settings.LLM_MODEL
  
          context = build_concierge_context(trip, recent_messages)
-         system_content = f"{CONCIERGE_SYSTEM_PROMPT}\n\nContext:\n{context}"
+```
+
+Also update the module docstring:
+
+```diff
+ """
+-Concierge Agent — In-Trip Assistance (US-013).
+-Uses Groq Llama 3 for local recommendations, emergency contacts, and travel tips.
++Concierge Agent — In-Trip Assistance (US-013).
++Uses a self-hosted Ollama LLM (via RunPod) for local recommendations, emergency contacts, and travel tips.
+ """
+```
+
+### 2.5 `.env`
+
+Remove the old Groq key and add the three Ollama variables:
+
+```diff
+-# Groq AI (US-005, US-013)
+-GROQ_API_KEY=your-groq-api-key-here
++# Ollama on RunPod (US-005, US-013)
++OLLAMA_BASE_URL=https://<your-pod-id>-11434.proxy.runpod.net/v1
++OLLAMA_API_KEY=ollama
++OLLAMA_MODEL=llama3.1:8b
+```
+
+> [!CAUTION]
+> Never commit your `.env` file to git. Make sure `.env` is in `.gitignore` (it already is in
+> this project). The `OLLAMA_API_KEY` value is a dummy placeholder; Ollama doesn't validate it,
+> but the `openai` Python SDK requires a non-empty string.
+
+---
+
+## Part 3 — Rebuild & Restart
+
+### Local development
+
+```powershell
+# Inside the backend virtualenv
+pip install -r backend/requirements.txt
+
+# Start Django dev server
+python backend/manage.py runserver
+```
+
+### Docker / docker-compose
+
+```powershell
+# Rebuild the backend image to pick up the new dependency
+docker compose build backend
+
+# Restart everything
+docker compose up -d
 ```
 
 ---
 
-## Part 3: Verification & Next Steps
+## Part 4 — Verify the Migration
 
-### Verification Plan
-1. **Database Connections**:
-   - Start the backend server: `python manage.py runserver`.
-   - Verify that Django boots without database configuration errors.
-   - Access the Django Admin panel or hit an authenticated endpoint to write user/session data to MongoDB Atlas. Check the MongoDB Atlas console to verify that collections are created and populated.
-2. **AI Stream Responses**:
-   - Ensure the Hostinger VPS is running and accessible over your whitelisted network/port.
-   - Run a test prompt through the Pathfinder or Concierge agent endpoints and confirm that streaming tokens are returned from your cloud LLM.
+### 4.1 Check Ollama is reachable
+
+```powershell
+# Replace with your actual RunPod URL
+$base = "https://<your-pod-id>-11434.proxy.runpod.net"
+
+# Should return {"status":"ok"}
+Invoke-RestMethod "$base/api/tags"
+```
+
+Or via curl (WSL / Git Bash):
+
+```bash
+curl https://<your-pod-id>-11434.proxy.runpod.net/api/tags
+```
+
+### 4.2 Quick Python smoke test
+
+Run this from inside your `backend/` venv before touching Django:
+
+```python
+# save as backend/test_ollama.py and run: python test_ollama.py
+import asyncio
+from openai import AsyncOpenAI
+
+BASE_URL = "https://<your-pod-id>-11434.proxy.runpod.net/v1"
+MODEL    = "llama3.1:8b"
+
+async def main():
+    client = AsyncOpenAI(base_url=BASE_URL, api_key="ollama")
+    stream = await client.chat.completions.create(
+        model=MODEL,
+        messages=[{"role": "user", "content": "Say hello in one sentence."}],
+        stream=True,
+    )
+    async for chunk in stream:
+        content = chunk.choices[0].delta.content
+        if content:
+            print(content, end="", flush=True)
+    print()
+
+asyncio.run(main())
+```
+
+Expected output: a short greeting sentence streamed token-by-token.
+
+### 4.3 Test the Pathfinder endpoint
+
+With the Django server running, send a POST request to the itinerary endpoint:
+
+```powershell
+$headers = @{ Authorization = "Bearer <your-jwt-token>"; "Content-Type" = "application/json" }
+$body    = '{"destination":"Paris","duration_days":3,"currency":"EUR"}'
+
+Invoke-RestMethod -Method POST `
+  -Uri "http://localhost:8000/api/ai/generate-itinerary/" `
+  -Headers $headers `
+  -Body $body
+```
+
+You should see `event: token` SSE chunks flowing in, followed by an `event: complete` with the
+parsed `activities` array.
+
+---
+
+## Part 5 — Cost & Lifecycle Tips for RunPod
+
+| Scenario | Recommendation |
+|---|---|
+| **Active development** | Keep the pod running; stop it when not coding |
+| **Production (low traffic)** | Use a **Serverless** RunPod endpoint — you only pay per inference second |
+| **Production (high traffic)** | Keep a persistent pod and add a load balancer |
+| **Saving model weights** | Always use a **Volume** mounted at `/root/.ollama` so you don't re-download on restart |
+| **Reducing cost** | Spot/interruptible instances are up to 50% cheaper for dev use |
+
+### Stopping vs Terminating
+
+- **Stop pod** → GPU is released, disk is retained, billed at storage rate only.
+- **Terminate pod** → Everything is deleted. Only do this if you have a Volume with weights.
+
+---
+
+## Quick Reference: What Changed Where
+
+```
+Ai-travel-Agent-rebased/
+├── .env                                  ← GROQ_API_KEY removed; OLLAMA_* added
+└── backend/
+    ├── requirements.txt                  ← groq removed; openai added
+    ├── config/
+    │   └── settings.py  (L119-122)      ← GROQ_* → LLM_BASE_URL / LLM_API_KEY / LLM_MODEL
+    └── ai_agents/
+        ├── pathfinder.py  (L75-78)      ← AsyncGroq → AsyncOpenAI
+        └── concierge.py   (L59-62)      ← AsyncGroq → AsyncOpenAI
+```
+
+The rest of the codebase — views, rate limiter, SSE streaming bridge, Docker, Nginx — is
+**completely unchanged**. The OpenAI-compatible streaming format Ollama uses is byte-for-byte
+identical to Groq's, so the SSE consumer on the React frontend also needs no changes.

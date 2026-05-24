@@ -103,7 +103,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # ──────────────────────────────────────────────
 # Custom JWT Auth
 # ──────────────────────────────────────────────
-JWT_SECRET_KEY = SECRET_KEY
+JWT_SECRET_KEY = os.getenv('SECRET_KEY')
 JWT_ACCESS_EXPIRATION_MINUTES = 15
 JWT_REFRESH_EXPIRATION_DAYS = 30
 
@@ -125,8 +125,9 @@ CELERY_TASK_ALWAYS_EAGER = not bool(REDIS_URL)  # Run synchronously without Redi
 # ──────────────────────────────────────────────
 # AI / Groq
 # ──────────────────────────────────────────────
-GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
-GROQ_MODEL = 'llama-3.1-8b-instant'
+LLM_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434/v1')
+LLM_API_KEY = os.getenv('OLLAMA_API_KEY', 'ollama')   # Ollama ignores this; required by the openai SDK
+LLM_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')
 
 # ──────────────────────────────────────────────
 # CORS

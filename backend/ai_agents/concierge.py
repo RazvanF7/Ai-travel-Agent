@@ -56,10 +56,12 @@ async def stream_concierge_response(question, trip=None, recent_messages=None):
     Yields token chunks as they arrive.
     """
     try:
-        from groq import AsyncGroq
-
-        client = AsyncGroq(api_key=settings.GROQ_API_KEY)
-        model = settings.GROQ_MODEL
+        from openai import AsyncOpenAI
+        client = AsyncOpenAI(
+            base_url=settings.LLM_BASE_URL,
+            api_key=settings.LLM_API_KEY,
+        )
+        model = settings.LLM_MODEL
 
         context = build_concierge_context(trip, recent_messages)
         system_content = f"{CONCIERGE_SYSTEM_PROMPT}\n\nContext:\n{context}"
