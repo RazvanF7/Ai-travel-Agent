@@ -33,6 +33,8 @@ def serialize_trip(trip, include_itinerary=True):
         'start_date': trip.start_date.isoformat() if trip.start_date else None,
         'end_date': trip.end_date.isoformat() if trip.end_date else None,
         'budget': str(trip.budget) if trip.budget else None,
+        'currency': trip.currency,
+        'duration_days': trip.duration_days,
         'created_at': trip.created_at.isoformat(),
         'updated_at': trip.updated_at.isoformat(),
     }
