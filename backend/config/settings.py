@@ -96,7 +96,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # ──────────────────────────────────────────────
 # Custom JWT Auth
 # ──────────────────────────────────────────────
-JWT_SECRET_KEY = SECRET_KEY
+JWT_SECRET_KEY = os.getenv('SECRET_KEY')
 JWT_ACCESS_EXPIRATION_MINUTES = 15
 JWT_REFRESH_EXPIRATION_DAYS = 30
 
