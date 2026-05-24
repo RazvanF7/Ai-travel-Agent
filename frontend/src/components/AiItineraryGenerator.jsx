@@ -1,15 +1,16 @@
 import { useState, useRef, useCallback } from 'react';
 import { ai, readSSEStream } from '../services/api';
 
-/**
- * Try to extract a JSON array of activities from the accumulated text so far.
- * Returns [] if the text doesn't contain a valid array yet.
- */
 function tryParseActivities(text) {
+  // Helper to clean trailing commas before JSON.parse
+  const cleanJson = (str) => {
+    return str.replace(/,\s*\]/g, ']').replace(/,\s*\}/g, '}');
+  };
+
   // Try fenced JSON block first
-  const fenced = text.match(/```json\s*([\s\S]*?)\s*```/);
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
   if (fenced) {
-    try { return JSON.parse(fenced[1]); } catch { /* fall through */ }
+    try { return JSON.parse(cleanJson(fenced[1])); } catch { /* fall through */ }
   }
 
   // Try to find a raw JSON array (even partial — look for the outermost [ ... ])
@@ -21,13 +22,11 @@ function tryParseActivities(text) {
   if (end <= start) {
     // Array hasn't closed yet — try to "fix" partial JSON by adding ] and see if it parses
     const partial = text.slice(start) + ']';
-    // Remove trailing comma before ]
-    const cleaned = partial.replace(/,\s*\]$/, ']');
-    try { return JSON.parse(cleaned); } catch { return []; }
+    try { return JSON.parse(cleanJson(partial)); } catch { return []; }
   }
 
   try {
-    return JSON.parse(text.slice(start, end + 1));
+    return JSON.parse(cleanJson(text.slice(start, end + 1)));
   } catch {
     return [];
   }

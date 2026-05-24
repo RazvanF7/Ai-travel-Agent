@@ -47,21 +47,33 @@ def generate_itinerary_prompt(destination, duration_days, budget=None, currency=
 
 def parse_itinerary_json(text):
     """Extract JSON array of activities from AI response."""
-    # Try to find JSON block
-    json_match = re.search(r'```json\s*([\s\S]*?)\s*```', text)
+    import re
+    
+    def clean_json_string(s):
+        # Remove trailing commas
+        s = re.sub(r',\s*\]', ']', s)
+        s = re.sub(r',\s*\}', '}', s)
+        return s
+
+    # 1. Try to find JSON block
+    json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text, re.IGNORECASE)
     if json_match:
         try:
-            return json.loads(json_match.group(1))
+            return json.loads(clean_json_string(json_match.group(1)))
         except json.JSONDecodeError:
             pass
 
-    # Try to find raw JSON array
-    json_match = re.search(r'\[\s*\{[\s\S]*\}\s*\]', text)
-    if json_match:
-        try:
-            return json.loads(json_match.group(0))
-        except json.JSONDecodeError:
-            pass
+    # 2. Try to find raw JSON array by index
+    start = text.find('[')
+    if start != -1:
+        end = text.rfind(']')
+        if end > start:
+            try:
+                parsed = json.loads(clean_json_string(text[start:end+1]))
+                if isinstance(parsed, list):
+                    return parsed
+            except json.JSONDecodeError:
+                pass
 
     return []
 
