@@ -1,0 +1,275 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container" style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+  <!-- Background orbs -->
+  <div style="
+    position: fixed; top: 15%; left: 10%; width: 400px; height: 400px;
+    border-radius: 50%; background: rgba(99, 102, 241, 0.08); filter: blur(100px);
+    pointer-events: none;"></div>
+  <div style="
+    position: fixed; bottom: 10%; right: 15%; width: 350px; height: 350px;
+    border-radius: 50%; background: rgba(6, 182, 212, 0.06); filter: blur(100px);
+    pointer-events: none;"></div>
+
+  <div class="animate-slide-up" style="max-width: 440px; width: 90%; position: relative; z-index: 1;">
+    <!-- Logo -->
+    <div style="text-align: center; margin-bottom: 40px;">
+      <h1 style="
+        font-size: 2.5rem; font-weight: 800;
+        background: var(--gradient-primary); -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent; background-clip: text;
+        margin-bottom: 8px;">
+        Voyage AI Travel
+      </h1>
+      <p style="color: var(--text-secondary); font-size: 1.0625rem;">
+        Plan trips together with AI-powered itineraries
+      </p>
+    </div>
+
+    <!-- Login Card -->
+    <div class="glass-card-static" style="padding: 32px;">
+      <!-- Google Login Button -->
+      <a
+        href="{% url 'google-oauth-redirect' %}"
+        class="btn btn-secondary btn-lg"
+        style="
+          display: flex; justify-content: center; width: 100%; margin-bottom: 24px; font-size: 0.9375rem;
+          background: rgba(255,255,255,0.06); padding: 14px 20px; text-decoration: none;"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" style="margin-right: 8px;">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </a>
+
+      <div style="
+        display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+        color: var(--text-tertiary); font-size: 0.8125rem;">
+        <div style="flex: 1; height: 1px; background: var(--border-subtle);"></div>
+        or use email
+        <div style="flex: 1; height: 1px; background: var(--border-subtle);"></div>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button type="button" id="tab-signin" class="btn btn-secondary btn-sm" style="flex: 1;">Sign In</button>
+        <button type="button" id="tab-signup" class="btn btn-ghost btn-sm" style="flex: 1;">Sign Up</button>
+      </div>
+
+      <form id="signin-form" style="display: block;">
+        <div class="input-group" style="margin-bottom: 16px;">
+          <label for="signin-email">Email Address</label>
+          <input
+            id="signin-email"
+            class="input"
+            type="email"
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+
+        <div class="input-group" style="margin-bottom: 24px;">
+          <label for="signin-password">Password</label>
+          <input
+            id="signin-password"
+            class="input"
+            type="password"
+            placeholder="••••••••"
+            required
+          />
+        </div>
+
+        <div id="signin-error" style="
+          display: none; padding: 10px 14px; background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-md);
+          color: var(--accent-danger); font-size: 0.875rem; margin-bottom: 16px;">
+        </div>
+
+        <button
+          type="submit"
+          id="signin-submit"
+          class="btn btn-primary btn-lg"
+          style="width: 100%;"
+        >
+          Sign In
+        </button>
+      </form>
+
+      <form id="signup-form" style="display: none;">
+        <div class="input-group" style="margin-bottom: 12px;">
+          <label for="signup-first-name">First Name</label>
+          <input
+            id="signup-first-name"
+            class="input"
+            type="text"
+            placeholder="John"
+            required
+          />
+        </div>
+
+        <div class="input-group" style="margin-bottom: 12px;">
+          <label for="signup-last-name">Last Name</label>
+          <input
+            id="signup-last-name"
+            class="input"
+            type="text"
+            placeholder="Doe"
+          />
+        </div>
+
+        <div class="input-group" style="margin-bottom: 12px;">
+          <label for="signup-email">Email Address</label>
+          <input
+            id="signup-email"
+            class="input"
+            type="email"
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+
+        <div class="input-group" style="margin-bottom: 24px;">
+          <label for="signup-password">Password</label>
+          <input
+            id="signup-password"
+            class="input"
+            type="password"
+            placeholder="Create a password"
+            minlength="6"
+            required
+          />
+        </div>
+
+        <div id="signup-error" style="
+          display: none; padding: 10px 14px; background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-md);
+          color: var(--accent-danger); font-size: 0.875rem; margin-bottom: 16px;">
+        </div>
+
+        <button
+          type="submit"
+          id="signup-submit"
+          class="btn btn-primary btn-lg"
+          style="width: 100%;"
+        >
+          Create Account
+        </button>
+      </form>
+    </div>
+
+    <p style="
+      text-align: center; margin-top: 24px; color: var(--text-tertiary);
+      font-size: 0.8125rem;">
+      By signing in, you agree to AI Travel Hub's Terms of Service
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const tabSignin = document.getElementById('tab-signin');
+  const tabSignup = document.getElementById('tab-signup');
+  const signinForm = document.getElementById('signin-form');
+  const signupForm = document.getElementById('signup-form');
+
+  const signinError = document.getElementById('signin-error');
+  const signinSubmit = document.getElementById('signin-submit');
+  const signupError = document.getElementById('signup-error');
+  const signupSubmit = document.getElementById('signup-submit');
+
+  function setActiveTab(tab) {
+    if (tab === 'signin') {
+      tabSignin.classList.add('btn-secondary');
+      tabSignin.classList.remove('btn-ghost');
+      tabSignup.classList.add('btn-ghost');
+      tabSignup.classList.remove('btn-secondary');
+      signinForm.style.display = 'block';
+      signupForm.style.display = 'none';
+      signinError.style.display = 'none';
+    } else {
+      tabSignup.classList.add('btn-secondary');
+      tabSignup.classList.remove('btn-ghost');
+      tabSignin.classList.add('btn-ghost');
+      tabSignin.classList.remove('btn-secondary');
+      signupForm.style.display = 'block';
+      signinForm.style.display = 'none';
+      signupError.style.display = 'none';
+    }
+  }
+
+  tabSignin.addEventListener('click', () => setActiveTab('signin'));
+  tabSignup.addEventListener('click', () => setActiveTab('signup'));
+
+  signinForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    signinError.style.display = 'none';
+    signinSubmit.disabled = true;
+    signinSubmit.textContent = 'Signing in...';
+
+    const email = document.getElementById('signin-email').value;
+    const password = document.getElementById('signin-password').value;
+
+    try {
+      const response = await fetch("{% url 'session-login' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': window.csrftoken
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Login failed. Please try again.');
+      }
+
+      window.location.href = "{% url 'dashboard' %}";
+    } catch (err) {
+      signinError.textContent = err.message;
+      signinError.style.display = 'block';
+      signinSubmit.disabled = false;
+      signinSubmit.textContent = 'Sign In';
+    }
+  });
+
+  signupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    signupError.style.display = 'none';
+    signupSubmit.disabled = true;
+    signupSubmit.textContent = 'Creating...';
+
+    const first_name = document.getElementById('signup-first-name').value;
+    const last_name = document.getElementById('signup-last-name').value;
+    const email = document.getElementById('signup-email').value;
+    const password = document.getElementById('signup-password').value;
+
+    try {
+      const response = await fetch("{% url 'session-signup' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': window.csrftoken
+        },
+        body: JSON.stringify({ email, password, first_name, last_name })
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Sign up failed. Please try again.');
+      }
+
+      window.location.href = "{% url 'dashboard' %}";
+    } catch (err) {
+      signupError.textContent = err.message;
+      signupError.style.display = 'block';
+      signupSubmit.disabled = false;
+      signupSubmit.textContent = 'Create Account';
+    }
+  });
+</script>
+{% endblock %}

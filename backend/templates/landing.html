@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/landing.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="landing-page">
+  <!-- Hero Section -->
+  <section class="hero-section" style="background-image: url('{% static 'images/hero_bg.png' %}')">
+    <header class="hero-header">
+      <div style="display: flex; align-items: center; gap: 12px; font-size: 1.5rem; font-weight: 800; color: white;">
+        <span>🌐</span> Voyage AI Travel
+      </div>
+      <nav class="hero-nav">
+        <a href="#destinations">Destinations</a>
+        <a href="#how-it-works">Bookings</a>
+        <a href="#ai">AI Agent</a>
+        <a href="#blog">Blog</a>
+        <a class="btn btn-primary" href="{% if request.user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}{% endif %}">Plan a Trip</a>
+      </nav>
+    </header>
+
+    <div class="hero-content">
+      <h1 class="hero-title">
+        Your Personal AI Travel Agent.<br />
+        Effortlessly Plan &amp; Book Your Next Journey.
+      </h1>
+    </div>
+  </section>
+
+  <!-- Feature Cards Grid -->
+  <section class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon-wrapper">🗺️</div>
+      <h3>AI-Powered Planning</h3>
+      <p>Optimized itineraries tailored to your preferences, time, and budget.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon-wrapper">💬</div>
+      <h3>24/7 Assistance</h3>
+      <p>Your on-the-go concierge for local tips, restaurants, and emergencies.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon-wrapper">📋</div>
+      <h3>Personalized Itineraries</h3>
+      <p>Smart checklists and expense tracking seamlessly integrated.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon-wrapper">🏷️</div>
+      <h3>Smart Deals</h3>
+      <p>Price drop alerts and travel deals found automatically.</p>
+    </div>
+  </section>
+
+  <!-- Content Section (Destinations & How It Works) -->
+  <section class="content-section" id="destinations">
+    <div>
+      <div class="section-header">
+        <h2>Recommended Destinations</h2>
+        <a href="#all" class="view-all">View all</a>
+      </div>
+      <div class="destinations-grid">
+        <div class="destination-card">
+          <img src="{% static 'images/kyoto.png' %}" alt="Kyoto" />
+          <div class="overlay"><h4>Kyoto</h4></div>
+        </div>
+        <div class="destination-card">
+          <img src="{% static 'images/italy.png' %}" alt="Italy" />
+          <div class="overlay"><h4>Italy</h4></div>
+        </div>
+        <div class="destination-card">
+          <img src="{% static 'images/iceland.png' %}" alt="Iceland" />
+          <div class="overlay"><h4>Iceland</h4></div>
+        </div>
+        <div class="destination-card">
+          <img src="{% static 'images/tokyo.png' %}" alt="Tokyo" />
+          <div class="overlay"><h4>Tokyo</h4></div>
+        </div>
+        <div class="destination-card">
+          <img src="{% static 'images/paris.png' %}" alt="Paris" />
+          <div class="overlay"><h4>Paris</h4></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="how-it-works">
+      <div class="section-header">
+        <h2>How It Works</h2>
+      </div>
+      <div class="how-it-works-list">
+        <div class="how-it-works-item">
+          <div class="step-number">1</div>
+          <div class="step-text">Share your dream destination and travel style with our AI.</div>
+        </div>
+        <div class="how-it-works-item">
+          <div class="step-number">2</div>
+          <div class="step-text">Review your personalized, optimized itinerary in seconds.</div>
+        </div>
+        <div class="how-it-works-item">
+          <div class="step-number">3</div>
+          <div class="step-text">Invite friends, track expenses, and manage checklists together.</div>
+        </div>
+        <div class="how-it-works-item">
+          <div class="step-number">4</div>
+          <div class="step-text">Travel stress-free with 24/7 AI Concierge assistance.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="landing-footer">
+    © 2026 Voyage AI Travel | <a href="#privacy">Privacy Policy</a> | <a href="#terms">Terms of Service</a> | <a href="#contact">Contact</a>
+  </footer>
+
+  <!-- Floating AI Chat Widget -->
+  <button id="floating-chat-btn" style="
+      position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+      width: 60px; height: 60px; border-radius: 50%;
+      background: var(--gradient-primary); color: white; border: none;
+      box-shadow: var(--shadow-glow); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; transition: transform 0.3s;">
+    <span>💬</span>
+  </button>
+
+  <div id="floating-chat-container" class="floating-chat-container" style="display: none;">
+    <div class="floating-chat-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span>✈️</span> AI Travel Assistant
+      </div>
+      <button id="close-chat-btn" style="background: transparent; border: none; color: white; cursor: pointer; font-size: 1.2rem;">×</button>
+    </div>
+
+    <div class="chat-messages" id="chat-messages">
+      <div class="message assistant">
+        <div class="message-sender-label">Agent</div>
+        <div class="message-bubble">Hi there! I am your personal AI Travel Assistant. Where would you like to go today?</div>
+        <div class="message-timestamp">Just now</div>
+      </div>
+    </div>
+
+    <div class="chat-input-area">
+      <div class="chat-input-wrapper">
+        <input type="text" id="chat-input" placeholder="Type a message..." />
+        <button class="btn-send" id="btn-send">↑</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+  const chatBtn = document.getElementById('floating-chat-btn');
+  const chatContainer = document.getElementById('floating-chat-container');
+  const closeBtn = document.getElementById('close-chat-btn');
+  const chatMessages = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('btn-send');
+  let isThinking = false;
+
+  chatBtn.onclick = () => {
+    chatBtn.style.display = 'none';
+    chatContainer.style.display = 'flex';
+  };
+
+  closeBtn.onclick = () => {
+    chatContainer.style.display = 'none';
+    chatBtn.style.display = 'flex';
+  };
+
+  function appendMessage(role, content, showThinking = false) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `message ${role}`;
+
+    const senderLabel = role === 'assistant'
+      ? `<div class="message-sender-label">Agent</div>`
+      : '';
+
+    msgDiv.innerHTML = `
+      ${senderLabel}
+      <div class="message-bubble">
+        <span class="content">${content}</span>
+        ${showThinking ? '<span class="thinking-cursor" style="opacity:0.6;">▊</span>' : ''}
+      </div>
+      <div class="message-timestamp">Just now</div>
+    `;
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    return msgDiv;
+  }
+
+  async function handleSend() {
+    const question = chatInput.value.trim();
+    if (!question || isThinking) return;
+
+    chatInput.value = '';
+    appendMessage('user', question);
+    isThinking = true;
+    sendBtn.disabled = true;
+
+    const assistantMsg = appendMessage('assistant', '', true);
+    const contentSpan = assistantMsg.querySelector('.content');
+    const cursor = assistantMsg.querySelector('.thinking-cursor');
+
+    try {
+      const response = await window.api.ai.concierge({ question, trip_id: null });
+
+      await window.api.readSSEStream(response, (data) => {
+        if (data.type === 'token') {
+          contentSpan.textContent += data.content;
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        } else if (data.type === 'complete' || data.type === 'error') {
+          if (data.type === 'error') contentSpan.textContent = '❌ ' + data.message;
+          if (cursor) cursor.remove();
+          isThinking = false;
+          sendBtn.disabled = false;
+        }
+      });
+    } catch (e) {
+      contentSpan.textContent = '❌ ' + e.message;
+      if (cursor) cursor.remove();
+      isThinking = false;
+      sendBtn.disabled = false;
+    }
+  }
+
+  sendBtn.onclick = handleSend;
+  chatInput.onkeydown = (e) => { if (e.key === 'Enter') handleSend(); };
+</script>
+{% endblock %}

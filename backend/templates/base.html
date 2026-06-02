@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Travel Hub</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Base CSS -->
+    <link rel="stylesheet" href="{% static 'css/index.css' %}">
+    
+    {% block extra_css %}{% endblock %}
+    
+    <script>
+      // CSRF token setup for fetch API
+      const csrftoken = '{{ csrf_token }}';
+    </script>
+</head>
+<body>
+    {% block content %}{% endblock %}
+
+    <script type="module">
+        import * as api from "{% static 'js/api.js' %}";
+        window.api = api; // Expose to global scope for easy use in inline scripts
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

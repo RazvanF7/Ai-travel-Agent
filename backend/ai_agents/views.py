@@ -1,0 +1,265 @@
+import json
+import asyncio
+from django.http import JsonResponse, StreamingHttpResponse
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from .rate_limiter import check_rate_limit, record_request
+from accounts.auth import jwt_required
+
+
+@csrf_exempt
+@jwt_required
+def ai_status(request):
+    """Check AI rate limit status for the current user."""
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    allowed, retry_after = check_rate_limit(request.user.id)
+    return JsonResponse({
+        'allowed': allowed,
+        'retry_after': retry_after,
+    })
+
+
+def _run_async_generator_sync(async_gen):
+    """Run an async generator synchronously, yielding items one at a time.
+
+    Creates a new event loop to bridge the async streaming generators
+    (pathfinder/concierge) into Django's synchronous StreamingHttpResponse.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        while True:
+            try:
+                item = loop.run_until_complete(async_gen.__anext__())
+                yield item
+            except StopAsyncIteration:
+                break
+    finally:
+        loop.close()
+
+
+def _sse_stream(async_gen):
+    """Convert an async generator of dicts into SSE text/event-stream lines."""
+    for chunk in _run_async_generator_sync(async_gen):
+        event_type = chunk.get('type', 'message')
+        data = json.dumps(chunk)
+        yield f"event: {event_type}\ndata: {data}\n\n"
+
+
+def _save_itinerary_and_message(trip_id, destination, activities):
+    """Synchronously save the generated itinerary items and create a chat message.
+
+    Runs inside a transaction. Deletes any pre-existing itinerary items for the trip.
+    """
+    from django.db import transaction
+    from trips.models import Trip, ItineraryItem
+    from chat.models import Message
+    from django.contrib.auth.models import User
+    import logging
+    import re
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        with transaction.atomic():
+            # Clear old itinerary items for this trip (US-005 AC-3 override)
+            ItineraryItem.objects.filter(trip_id=trip_id).delete()
+
+            # Create new items
+            for activity in activities:
+                try:
+                    # Clean/validate day and order
+                    try:
+                        day = int(activity.get('day', 1))
+                    except (ValueError, TypeError):
+                        day = 1
+
+                    try:
+                        order = int(activity.get('order', 0))
+                    except (ValueError, TypeError):
+                        order = 0
+
+                    # Clean/validate duration
+                    duration = activity.get('duration_minutes')
+                    if duration is not None:
+                        try:
+                            duration = int(duration)
+                        except (ValueError, TypeError):
+                            duration = None
+
+                    # Clean/validate start_time
+                    start_time = activity.get('start_time')
+                    if start_time == '':
+                        start_time = None
+                    elif start_time:
+                        start_time_str = str(start_time).strip()
+                        # If H:MM, pad to 0H:MM
+                        if re.match(r'^\d:\d{2}$', start_time_str):
+                            start_time_str = f"0{start_time_str}"
+                        # Check if it matches HH:MM or HH:MM:SS
+                        if not re.match(r'^\d{2}:\d{2}(:\d{2})?$', start_time_str):
+                            start_time_str = None
+                        start_time = start_time_str
+
+                    ItineraryItem.objects.create(
+                        trip_id=trip_id,
+                        day=day,
+                        order=order,
+                        title=activity.get('title', 'Activity')[:255],
+                        description=activity.get('description', ''),
+                        location=activity.get('location', '')[:255],
+                        start_time=start_time,
+                        duration_minutes=duration,
+                    )
+                except Exception as item_err:
+                    logger.error(f"Error saving activity item {activity}: {item_err}", exc_info=True)
+                    continue
+
+            # Create system chat message
+            try:
+                bot_user, _ = User.objects.get_or_create(
+                    username='pathfinder',
+                    defaults={'first_name': 'Pathfinder', 'email': 'pathfinder@aitravelhub.com'}
+                )
+                trip_obj = Trip.objects.get(id=trip_id)
+                Message.objects.create(
+                    group_id=trip_obj.group_id,
+                    sender=bot_user,
+                    content=f'🗺️ Pathfinder generated a new itinerary for {destination}. Tap to view.',
+                    message_type='ai',
+                )
+            except Exception as msg_err:
+                logger.error(f"Error creating chat message: {msg_err}", exc_info=True)
+
+    except Exception as trans_err:
+        logger.error(f"Transaction failed for itinerary generation: {trans_err}", exc_info=True)
+
+
+@csrf_exempt
+@jwt_required
+def generate_itinerary(request):
+    """Generate an AI itinerary in a single response (US-005).
+
+    POST body: { destination, duration_days, budget, currency, preferences|prompt, trip_id }
+    Response: JSON with activities.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    # Rate limit check (US-005 AC-5)
+    user_id = request.user.id
+    allowed, retry_after = check_rate_limit(user_id)
+    if not allowed:
+        return JsonResponse({
+            'error': f'Rate limit exceeded. Try again in {retry_after} seconds.',
+            'retry_after': retry_after,
+        }, status=429)
+
+    record_request(user_id)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    preferences = body.get('preferences', '')
+    prompt = body.get('prompt', '')
+    trip_id = body.get('trip_id')
+
+    # Prefer trip data when available
+    trip = None
+    if trip_id:
+        from trips.models import Trip
+        try:
+            trip = Trip.objects.get(id=trip_id)
+        except Trip.DoesNotExist:
+            return JsonResponse({'error': 'Trip not found'}, status=404)
+
+    destination = body.get('destination', '')
+    duration_days = body.get('duration_days', 3)
+    budget = body.get('budget')
+    currency = body.get('currency', 'EUR')
+
+    if trip:
+        destination = trip.destination
+        duration_days = trip.duration_days or duration_days
+        budget = trip.budget if trip.budget is not None else budget
+        currency = trip.currency or currency
+
+    merged_preferences = prompt or preferences
+
+    from .pathfinder import generate_itinerary
+
+    result = generate_itinerary(
+        destination, duration_days, budget, currency, merged_preferences
+    )
+
+    if result.get('error'):
+        return JsonResponse({'error': result['error']}, status=500)
+
+    activities = result.get('activities') or []
+    if not activities:
+        return JsonResponse({
+            'error': 'AI did not return a usable itinerary. Try rephrasing your request.',
+            'full_text': result.get('full_text', ''),
+        }, status=422)
+
+    if trip_id:
+        _save_itinerary_and_message(trip_id, destination, activities)
+
+    return JsonResponse({
+        'activities': activities,
+        'full_text': result.get('full_text', ''),
+    })
+
+
+@csrf_exempt
+@jwt_required
+def concierge_chat(request):
+    """AI Concierge in-trip assistance via SSE streaming (US-013).
+
+    POST body: { question, trip_id }
+    Response: text/event-stream with token/complete/error events.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    # Rate limit check
+    user_id = request.user.id
+    allowed, retry_after = check_rate_limit(user_id)
+    if not allowed:
+        return JsonResponse({
+            'error': f'Rate limit exceeded. Try again in {retry_after} seconds.',
+            'retry_after': retry_after,
+        }, status=429)
+
+    record_request(user_id)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    question = body.get('question', '')
+    trip_id = body.get('trip_id')
+
+    # Load trip context if available
+    trip = None
+    if trip_id:
+        from trips.models import Trip
+        try:
+            trip = Trip.objects.get(id=trip_id)
+        except Trip.DoesNotExist:
+            pass
+
+    from .concierge import stream_concierge_response
+
+    response = StreamingHttpResponse(
+        _sse_stream(stream_concierge_response(question, trip=trip)),
+        content_type='text/event-stream',
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'
+    return response

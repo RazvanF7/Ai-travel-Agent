@@ -1,0 +1,561 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/trip.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="trip-dashboard">
+  <!-- Header -->
+  <header class="trip-header">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm" style="color: var(--text-primary); text-decoration: none;">
+        ← Back
+      </a>
+      <div class="trip-logo">
+        <span class="trip-logo-icon">▲</span>
+        Travel Hub
+      </div>
+    </div>
+    <div class="trip-user-menu">
+      <span style="font-size: 0.875rem;">{{ request.user.first_name|default:request.user.email }}</span>
+      <div class="trip-user-avatar">
+        {{ request.user.first_name.0|default:request.user.email.0|upper }}
+      </div>
+      <a href="{% url 'logout' %}" class="btn btn-sm btn-primary" style="text-decoration: none;">Logout</a>
+    </div>
+  </header>
+
+  <div class="trip-layout-grid">
+    <!-- Main Content Column -->
+    <div>
+      <!-- Trip Hero -->
+      <div class="trip-hero" style="background-image: url('{% static 'images/act_train_1777903567136.png' %}');">
+        <div class="trip-hero-content">
+          <h1 class="trip-hero-title">{{ trip.destination }}</h1>
+          <div class="trip-hero-meta">
+            <span>{{ trip.start_date|date:"M d, Y" }} → {{ trip.end_date|date:"M d, Y" }}</span>
+            <span class="trip-hero-badge">{{ trip.duration_days|default:"--" }} days</span>
+          </div>
+        </div>
+        {% if trip.budget %}
+        <div class="trip-budget-coin">
+          <span style="font-size: 2rem;">💰</span>
+          <span class="trip-budget-coin-label">Budget</span>
+          <span class="trip-budget-coin-value">{{ trip.budget }} {{ trip.currency }}</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Tabs -->
+      <div class="trip-tabs-container" id="trip-tabs">
+        <button class="trip-tab active" data-tab="itinerary">Itinerary</button>
+        <button class="trip-tab" data-tab="chat">Chat</button>
+        <button class="trip-tab" data-tab="checklist">Checklist</button>
+        <button class="trip-tab" data-tab="expenses">Expenses</button>
+        <button class="trip-tab" data-tab="concierge">AI Concierge</button>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="animate-fade-in" id="tab-content">
+        <!-- Itinerary Tab -->
+        <div id="tab-itinerary" class="tab-pane">
+          <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+            <button class="btn btn-teal" id="btn-toggle-ai-gen">🗺️ Generate with AI</button>
+          </div>
+
+          <div id="ai-generator-container" style="display: none; margin-bottom: 24px;">
+            <div class="glass-card-static">
+              <h3 style="margin-bottom: 16px;">AI Itinerary Generator</h3>
+              <form id="ai-gen-form">
+                <div class="input-group" style="margin-bottom: 16px;">
+                  <label>Travel Style & Preferences</label>
+                  <textarea id="ai-gen-prompt" class="input" placeholder="E.g., relaxed pace, focused on food and history..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary" id="btn-run-ai-gen">Generate Itinerary</button>
+              </form>
+              <div id="ai-gen-progress" style="margin-top: 16px; display: none;"></div>
+            </div>
+          </div>
+
+          <div id="itinerary-list">
+            Loading itinerary...
+          </div>
+        </div>
+
+        <!-- Chat Tab -->
+        <div id="tab-chat" class="tab-pane" style="display: none;">
+          <div class="chat-window">
+            <div id="chat-messages" class="chat-messages">
+              Loading chat...
+            </div>
+            <form id="chat-form" class="chat-input-bar">
+              <input id="chat-input" class="input chat-input-field" placeholder="Type a message..." required />
+              <button type="submit" class="btn btn-primary chat-send-btn" id="btn-send-chat">➤</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Checklist Tab -->
+        <div id="tab-checklist" class="tab-pane" style="display: none;">
+          <div class="glass-card-static" style="margin-bottom: 20px;">
+            <h4 style="margin-bottom: 16px;">Add Item</h4>
+            <form id="checklist-form" style="display: flex; gap: 8px;">
+              <input id="checklist-title" class="input" style="flex: 1;" placeholder="Passport, Tickets..." required />
+              <button type="submit" class="btn btn-primary">Add</button>
+            </form>
+          </div>
+          <div id="checklist-items">
+            Loading checklist...
+          </div>
+        </div>
+
+        <!-- Expenses Tab -->
+        <div id="tab-expenses" class="tab-pane" style="display: none;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div>
+              <h3 style="margin-bottom: 16px;">Log Expense</h3>
+              <form id="expense-form" class="glass-card-static flex-col gap-sm">
+                <div class="input-group">
+                  <label>Amount ({{ trip.currency }})</label>
+                  <input type="number" id="expense-amount" class="input" step="0.01" required />
+                </div>
+                <div class="input-group">
+                  <label>Description</label>
+                  <input type="text" id="expense-description" class="input" required />
+                </div>
+                <div class="input-group">
+                  <label>Category</label>
+                  <select id="expense-category" class="input">
+                    <option value="Transport">Transport</option>
+                    <option value="Food">Food</option>
+                    <option value="Lodging">Lodging</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="margin-top: 16px;">Add Expense</button>
+              </form>
+            </div>
+            <div>
+              <h3 style="margin-bottom: 16px;">Summary</h3>
+              <div id="expense-summary" class="glass-card-static">
+                Loading summary...
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Concierge Tab -->
+        <div id="tab-concierge" class="tab-pane" style="display: none;">
+          <div class="glass-card-static" style="height: 500px; display: flex; flex-direction: column;">
+            <div id="concierge-messages" style="flex: 1; overflow-y: auto; padding: 16px; background: var(--bg-primary); margin-bottom: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+              <div class="message assistant">
+                <div class="message-bubble">Hi! I'm your AI Concierge for {{ trip.destination }}. How can I help?</div>
+              </div>
+            </div>
+            <form id="concierge-form" style="display: flex; gap: 8px;">
+              <input id="concierge-input" class="input" style="flex: 1;" placeholder="Ask about places to eat, things to do..." required />
+              <button type="submit" class="btn btn-primary" id="btn-send-concierge">Ask</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Column -->
+    <div>
+      <div class="sidebar-container">
+        <h2 class="sidebar-title">Travel Tools</h2>
+
+        <!-- AI Chat Card Preview -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-header">AI Chat Card</div>
+          <div class="ai-bubble" id="sidebar-chat">
+            <span style="color: var(--text-tertiary)">Loading chat...</span>
+          </div>
+        </div>
+        
+        <!-- Checklist Preview -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-header">Checklist</div>
+          <div id="sidebar-checklist">Loading...</div>
+        </div>
+
+        <!-- Expenses Preview -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-header">Expenses</div>
+          <div id="sidebar-expenses">Loading...</div>
+        </div>
+
+        <!-- AI Concierge Preview -->
+        <div class="sidebar-card">
+          <div class="sidebar-card-header">AI Concierge</div>
+          <div style="text-align: center; margin-bottom: 12px;">
+            <span style="font-size: 3rem;">🤖</span>
+          </div>
+          <div style="display: flex; align-items: center; background: var(--bg-glass); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-full); font-size: 0.8125rem;">
+            <span style="flex: 1; color: var(--text-secondary);">Find me a quiet tea house</span>
+            <span style="background: var(--accent-primary); width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">🔍</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <footer style="background: var(--bg-secondary); border-top: 1px solid var(--border-subtle); padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 0.875rem; margin-top: 40px;">
+    © 2026 Voyage AI Travel
+  </footer>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+  const tripId = {{ trip.id }};
+  const groupId = {{ trip.group.id }};
+  const currentUserId = {{ request.user.id }};
+  
+  // Tab Switching
+  const tabs = document.querySelectorAll('.trip-tab');
+  const panes = document.querySelectorAll('.tab-pane');
+  
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      panes.forEach(p => p.style.display = 'none');
+      
+      tab.classList.add('active');
+      const targetId = 'tab-' + tab.getAttribute('data-tab');
+      document.getElementById(targetId).style.display = 'block';
+    });
+  });
+
+  // Load Data
+  async function loadItinerary() {
+    try {
+      const items = await window.api.itinerary.list(tripId);
+      const container = document.getElementById('itinerary-list');
+      if (items.length === 0) {
+        container.innerHTML = '<div class="glass-card-static empty-state"><div class="icon">🗺️</div><h3>No itinerary yet</h3><p>Use the AI generator or add activities manually to build your trip plan!</p></div>';
+        return;
+      }
+      
+      let html = '';
+      let currentDay = -1;
+      
+      items.forEach(item => {
+        if (item.day !== currentDay) {
+          if (currentDay !== -1) html += '</div></div>';
+          currentDay = item.day;
+          html += `<div style="margin-bottom: 28px;">
+            <h3 class="itinerary-day-header">
+              <span>📅</span> Day ${item.day}
+            </h3>
+            <div style="display: flex; flex-direction: column; gap: 12px;">`;
+        }
+        
+        html += `
+          <div class="activity-card">
+            <div class="activity-icon-circle">📍</div>
+            <div class="activity-content">
+              <div class="activity-title">${item.title}</div>
+              ${item.location ? `<div class="activity-location">📍 ${item.location}</div>` : ''}
+              ${item.description ? `<div class="activity-desc">${item.description}</div>` : ''}
+              <button class="btn btn-ghost btn-sm" onclick="deleteItineraryItem(${item.id})" style="color: var(--accent-danger); padding: 4px 0; align-self: flex-start; margin-top: 8px; font-size: 0.75rem;">
+                🗑️ Delete
+              </button>
+            </div>
+            <div class="activity-meta">
+              ${item.start_time ? `<div class="activity-time-badge">🕐 ${item.start_time}</div>` : ''}
+              ${item.duration_minutes ? `<div class="activity-duration-badge">${item.duration_minutes}min</div>` : ''}
+            </div>
+          </div>
+        `;
+      });
+      if (currentDay !== -1) html += '</div></div>';
+      container.innerHTML = html;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  window.deleteItineraryItem = async (itemId) => {
+    try {
+      await window.api.itinerary.delete(tripId, itemId);
+      loadItinerary();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  async function loadChecklists() {
+    try {
+      const items = await window.api.checklists.list(tripId);
+      const container = document.getElementById('checklist-items');
+      const sidebarContainer = document.getElementById('sidebar-checklist');
+      
+      if (items.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-tertiary);">No items yet.</div>';
+        sidebarContainer.innerHTML = '<div style="font-size: 0.875rem; color: var(--text-tertiary);">No pending tasks! 🎉</div>';
+        return;
+      }
+      
+      let html = '';
+      items.forEach(item => {
+        html += `
+          <div class="glass-card-static" style="margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1;">
+              <input type="checkbox" ${item.is_completed ? 'checked' : ''} onchange="toggleChecklist(${item.id})" />
+              <span style="${item.is_completed ? 'text-decoration: line-through; color: var(--text-tertiary);' : 'color: var(--text-primary);'}">${item.title}</span>
+            </label>
+            <button class="btn btn-ghost btn-sm" onclick="deleteChecklist(${item.id})">🗑️</button>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+      
+      const uncompleted = items.filter(i => !i.is_completed).slice(0, 3);
+      let sbHtml = '';
+      uncompleted.forEach(item => {
+        sbHtml += `
+          <div class="checklist-item-preview">
+            <div class="check-circle" style="background: var(--border-medium); color: var(--border-medium);"></div>
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-secondary);">${item.title}</span>
+          </div>
+        `;
+      });
+      if (uncompleted.length === 0) sbHtml = '<div style="font-size: 0.875rem; color: var(--text-tertiary);">No pending tasks! 🎉</div>';
+      sidebarContainer.innerHTML = sbHtml;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  window.toggleChecklist = async (itemId) => {
+    try {
+      await window.api.checklists.toggle(tripId, itemId);
+      loadChecklists();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  window.deleteChecklist = async (itemId) => {
+    try {
+      await window.api.checklists.remove(tripId, itemId);
+      loadChecklists();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  document.getElementById('checklist-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const titleInput = document.getElementById('checklist-title');
+    try {
+      await window.api.checklists.create(tripId, { title: titleInput.value });
+      titleInput.value = '';
+      loadChecklists();
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+
+  async function loadExpenses() {
+    try {
+      const expenses = await window.api.finance.expenses(tripId);
+      const summaryContainer = document.getElementById('expense-summary');
+      const sidebarContainer = document.getElementById('sidebar-expenses');
+      
+      let total = 0;
+      expenses.forEach(e => total += parseFloat(e.amount));
+      
+      let html = `<div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">${total.toFixed(2)} ${'{{ trip.currency }}'}</div><div style="color: var(--text-secondary); margin-bottom: 16px;">Total Trip Expenses</div>`;
+      
+      if (expenses.length > 0) {
+        html += '<div style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; margin-bottom: 16px;">';
+        expenses.forEach(e => {
+          let payerName = e.payer ? (e.payer.username || 'Unknown') : 'Unknown';
+          html += `<div style="display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid var(--border-subtle);">
+            <div><strong style="color: var(--text-primary);">${e.description}</strong> <span style="color: var(--text-tertiary); font-size: 0.75rem;">(paid by ${payerName})</span></div>
+            <div style="color: var(--text-secondary);">${e.amount} ${'{{ trip.currency }}'}</div>
+          </div>`;
+        });
+        html += '</div>';
+      }
+
+      // Add Debt Summary
+      try {
+        const debtData = await window.api.finance.debtSummary(tripId);
+        const transfers = debtData.transfers || [];
+        if (transfers.length > 0) {
+          html += '<h4 style="margin-bottom: 12px; margin-top: 24px; color: var(--text-primary);">Debt Summary (Who owes who)</h4>';
+          html += '<div style="display: flex; flex-direction: column; gap: 8px;">';
+          transfers.forEach(t => {
+            html += `<div class="glass-card-static" style="padding: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 3px solid var(--accent-primary);">
+              <div><strong style="color: var(--text-primary);">${t.from_user.name}</strong> <span style="color: var(--text-tertiary);">owes</span> <strong style="color: var(--text-primary);">${t.to_user.name}</strong></div>
+              <div style="font-weight: bold; color: var(--accent-primary);">${Number(t.amount).toFixed(2)} ${t.currency}</div>
+            </div>`;
+          });
+          html += '</div>';
+        } else {
+          html += '<div style="margin-top: 24px; padding: 12px; border-radius: var(--radius-md); background: rgba(16,185,129,0.1); color: #10b981; text-align: center;">All debts are settled up! 🎉</div>';
+        }
+      } catch (debtErr) {
+        console.error("Could not load debt summary", debtErr);
+      }
+      
+      summaryContainer.innerHTML = html;
+      sidebarContainer.innerHTML = `<div style="font-size: 1.5rem; font-weight: 700; text-align: center; color: var(--text-primary);">${total.toFixed(2)} ${'{{ trip.currency }}'}</div>`;
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  document.getElementById('expense-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await window.api.finance.createExpense({
+        trip_id: tripId,
+        amount: parseFloat(document.getElementById('expense-amount').value),
+        description: document.getElementById('expense-description').value,
+        category: document.getElementById('expense-category').value,
+        split_type: 'equal'
+      });
+      document.getElementById('expense-form').reset();
+      loadExpenses();
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+
+  // AI Generator
+  document.getElementById('btn-toggle-ai-gen').addEventListener('click', () => {
+    const container = document.getElementById('ai-generator-container');
+    container.style.display = container.style.display === 'none' ? 'block' : 'none';
+  });
+
+  document.getElementById('ai-gen-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const prompt = document.getElementById('ai-gen-prompt').value;
+    const progressDiv = document.getElementById('ai-gen-progress');
+    const btn = document.getElementById('btn-run-ai-gen');
+    
+    btn.disabled = true;
+    progressDiv.style.display = 'block';
+    progressDiv.innerHTML = '<span class="animate-pulse">Generating itinerary...</span>';
+    
+    try {
+      await window.api.ai.generateItinerary({ trip_id: tripId, prompt });
+      progressDiv.innerHTML = '✅ Done!';
+      setTimeout(() => {
+        document.getElementById('ai-generator-container').style.display = 'none';
+        progressDiv.style.display = 'none';
+        btn.disabled = false;
+        loadItinerary();
+      }, 1500);
+    } catch (e) {
+      progressDiv.innerHTML = '❌ ' + e.message;
+      btn.disabled = false;
+    }
+  });
+
+  // AI Concierge
+  document.getElementById('concierge-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('concierge-input');
+    const question = input.value;
+    const messages = document.getElementById('concierge-messages');
+    
+    input.value = '';
+    
+    messages.innerHTML += `<div class="message user"><div class="message-bubble">${question}</div></div>`;
+    messages.scrollTop = messages.scrollHeight;
+    
+    const aiId = 'ai-msg-' + Date.now();
+    messages.innerHTML += `<div class="message assistant" id="${aiId}"><div class="message-bubble"><span class="content"></span><span class="cursor" style="color: var(--accent-primary);">▊</span></div></div>`;
+    messages.scrollTop = messages.scrollHeight;
+    
+    const aiMsgEl = document.getElementById(aiId);
+    const contentEl = aiMsgEl.querySelector('.content');
+    const cursorEl = aiMsgEl.querySelector('.cursor');
+    
+    try {
+      const response = await window.api.ai.concierge({ question, trip_id: tripId });
+      await window.api.readSSEStream(response, (data) => {
+        if (data.type === 'token') {
+          contentEl.textContent += data.content;
+          messages.scrollTop = messages.scrollHeight;
+        } else if (data.type === 'complete' || data.type === 'error') {
+          if (data.type === 'error') contentEl.textContent = '❌ ' + data.message;
+          cursorEl.remove();
+        }
+      });
+    } catch (e) {
+      contentEl.textContent = '❌ ' + e.message;
+      cursorEl.remove();
+    }
+  });
+
+  // Chat
+  async function loadChat() {
+    try {
+      const messages = await window.api.chat.history(groupId);
+      const container = document.getElementById('chat-messages');
+      const sidebarContainer = document.getElementById('sidebar-chat');
+      
+      if (messages.length === 0) {
+        container.innerHTML = '<div style="color: var(--text-tertiary); text-align: center; margin-top: 20px;">No messages yet. Say hi!</div>';
+        sidebarContainer.innerHTML = '<span style="font-size: 1.5rem">🤖</span> AI: Ask me anything!';
+        return;
+      }
+
+      let html = '';
+      messages.forEach(msg => {
+        const isMe = msg.sender?.id === currentUserId;
+        const senderName = msg.sender ? (msg.sender.first_name || msg.sender.username) : 'System';
+        html += `<div class="message ${isMe ? 'user' : 'assistant'}">
+          <div class="message-sender">${senderName}</div>
+          <div class="message-bubble">${msg.content}</div>
+        </div>`;
+      });
+      container.innerHTML = `<div style="display: flex; flex-direction: column; gap: 8px;">${html}</div>`;
+      container.scrollTop = container.scrollHeight;
+
+      const lastMsg = messages[messages.length - 1];
+      const isSystemMsg = !lastMsg.sender;
+      sidebarContainer.innerHTML = `
+        <span style="font-size: 1.5rem">${isSystemMsg ? '🤖' : '👤'}</span> 
+        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; color: var(--text-secondary);">
+          ${isSystemMsg ? 'AI: ' : 'You: '} ${lastMsg.content}
+        </span>
+      `;
+    } catch (e) {
+      console.error(e);
+      document.getElementById('chat-messages').innerHTML = '<span style="color: var(--accent-danger);">Error loading chat.</span>';
+      document.getElementById('sidebar-chat').innerHTML = '<span style="color: var(--accent-danger);">Error loading chat.</span>';
+    }
+  }
+
+  document.getElementById('chat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('chat-input');
+    const content = input.value.trim();
+    if (!content) return;
+    
+    input.value = '';
+    try {
+      await window.api.chat.send(groupId, content);
+      loadChat();
+    } catch (e) {
+      alert(e.message);
+    }
+  });
+
+  // Initial load
+  loadItinerary();
+  loadChecklists();
+  loadExpenses();
+  loadChat();
+</script>
+{% endblock %}

@@ -1,0 +1,392 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="page-container">
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-logo">
+      <span class="logo-icon"></span>
+      Voyage AI Travel
+    </div>
+    <div class="user-menu">
+      <span style="color: var(--text-secondary); font-size: 0.875rem;">
+        {{ request.user.first_name|default:request.user.email }}
+      </span>
+      <div class="user-avatar">
+        {{ request.user.first_name.0|default:request.user.email.0|upper }}
+      </div>
+      <a href="{% url 'landing' %}" class="btn btn-ghost btn-sm">Home</a>
+      <a href="{% url 'logout' %}" class="btn btn-ghost btn-sm">Logout</a>
+    </div>
+  </header>
+
+  <div class="content-wrapper">
+    <!-- Welcome Section -->
+    <div class="animate-slide-up" style="margin-bottom: 40px; padding-top: 20px;">
+      <h1 style="font-size: 2rem; font-weight: 800; margin-bottom: 8px;">
+        Welcome back, <span style="
+          background: var(--gradient-primary); -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent; background-clip: text;
+        ">{{ request.user.first_name|default:'Traveler' }}</span>
+      </h1>
+      <p style="color: var(--text-secondary); font-size: 1.0625rem;">
+        Plan your next adventure with your group
+      </p>
+    </div>
+
+    <!-- Quick Actions -->
+    <div style="display: flex; gap: 12px; margin-bottom: 32px; flex-wrap: wrap;">
+      <button class="btn btn-primary" onclick="showModal('create-group-modal')">
+        Create Group
+      </button>
+      <button class="btn btn-secondary" onclick="showModal('join-group-modal')">
+        Join with Code
+      </button>
+    </div>
+
+    <!-- Groups Grid -->
+    <div id="groups-section" style="margin-bottom: 40px;">
+      <h2
+        style="font-size: 1.25rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+        Your Groups
+        <span class="badge badge-primary">{{ groups|length }}</span>
+      </h2>
+
+      {% if not groups %}
+      <div class="glass-card-static empty-state">
+        <div class="icon"></div>
+        <h3>No groups yet</h3>
+        <p>Create a group and invite your travel companions!</p>
+      </div>
+      {% else %}
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;"
+        id="groups-grid">
+        {% for group in groups %}
+        <div class="glass-card" style="animation-delay: {{ forloop.counter0|default:1 }}00ms; cursor: pointer;"
+          onclick="showGroupTrips({{ group.id }}, '{{ group.name|escapejs }}')">
+          <div class="flex-between" style="margin-bottom: 16px;">
+            <h3 style="font-size: 1.125rem; font-weight: 700;">{{ group.name }}</h3>
+            <span class="badge badge-primary">{{ group.memberships.count }} members</span>
+          </div>
+
+          <!-- Invite Code -->
+          <div style="
+              display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+              padding: 8px 12px; background: var(--bg-glass); border-radius: var(--radius-sm);
+              border: 1px solid var(--border-subtle);">
+            <span style="color: var(--text-tertiary); font-size: 0.75rem; font-weight: 500;">INVITE</span>
+            <code style="color: var(--accent-primary-light); font-weight: 700; letter-spacing: 0.1em; flex: 1;">
+                {{ group.invite_code }}
+              </code>
+            <button class="btn btn-ghost btn-sm"
+              onclick="event.stopPropagation(); copyToClipboard('{{ group.invite_code }}', this)"
+              style="padding: 4px 10px;">
+              Copy
+            </button>
+          </div>
+
+          <!-- Trip count -->
+          <div style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 16px;">
+            {{ group.trips.count }} trip{{ group.trips.count|pluralize }} planned
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-primary btn-sm"
+              onclick="event.stopPropagation(); openCreateTripModal({{ group.id }}, '{{ group.name|escapejs }}')">
+              + New Trip
+            </button>
+            <button class="btn btn-ghost btn-sm" style="color: var(--accent-danger);"
+              onclick="event.stopPropagation(); leaveGroup({{ group.id }}, '{{ group.name|escapejs }}')">
+              Leave
+            </button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Group Trips -->
+    <div id="trips-section" style="margin-bottom: 40px; display: none;">
+      <h2
+        style="font-size: 1.25rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
+        <span style="display: flex; align-items: center; gap: 8px;">
+          Trips for <span id="selected-group-name"></span>
+        </span>
+        <button class="btn btn-ghost btn-sm" onclick="showGroupsSection()">← Back to Groups</button>
+      </h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;"
+        id="trips-grid">
+        {% for trip in trips %}
+        <a href="{% url 'trip_detail' trip.id %}" class="glass-card trip-card" data-group-id="{{ trip.group.id }}"
+          style="animation-delay: {{ forloop.counter0|default:1 }}00ms; cursor: pointer; text-decoration: none; display: block; color: inherit;">
+          <div class="flex-between" style="margin-bottom: 12px;">
+            <h3 style="font-size: 1.125rem; font-weight: 700; margin: 0;">
+              {{ trip.destination }}
+            </h3>
+            <span class="badge badge-success">{{ trip.duration_days|default:"--" }} days</span>
+          </div>
+
+          <div
+            style="display: flex; gap: 16px; color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 12px;">
+            <span> {{ trip.start_date|date:"m/d/Y" }}</span>
+            <span>→</span>
+            <span>{{ trip.end_date|date:"m/d/Y" }}</span>
+          </div>
+
+          {% if trip.budget %}
+          <div style="color: var(--accent-tertiary); font-weight: 600; font-size: 0.9375rem;">
+            {{ trip.budget }} {{ trip.currency }}
+          </div>
+          {% endif %}
+
+          <div style="
+            margin-top: 12px; padding: 8px 12px; background: rgba(99, 102, 241, 0.08);
+            border-radius: var(--radius-sm); font-size: 0.8125rem; color: var(--text-accent);">
+            {{ trip.itinerary_items.count }} itinerary items
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+
+      <div id="no-trips-message" class="glass-card-static empty-state"
+        style="display: none; text-align: center; padding: 40px; margin-top: 16px;">
+        <div class="icon"></div>
+        <h3>No trips planned yet</h3>
+        <p>Click "+ New Trip" on the group card to start planning!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Group Modal -->
+  <div class="modal-overlay" id="create-group-modal" style="display: none;" onclick="closeModal('create-group-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2> Create a Group</h2>
+        <button class="modal-close" onclick="closeModal('create-group-modal')">✕</button>
+      </div>
+      <form id="create-group-form">
+        <div class="input-group" style="margin-bottom: 20px;">
+          <label for="group-name">Group Name</label>
+          <input id="group-name" class="input" placeholder="Summer Trip Squad " maxlength="100" required />
+        </div>
+        <div id="create-group-error"
+          style="color: var(--accent-danger); font-size: 0.875rem; margin-bottom: 16px; display: none;"></div>
+        <button class="btn btn-primary" style="width: 100%;" id="create-group-btn">
+          Create Group
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Join Group Modal -->
+  <div class="modal-overlay" id="join-group-modal" style="display: none;" onclick="closeModal('join-group-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2> Join a Group</h2>
+        <button class="modal-close" onclick="closeModal('join-group-modal')">✕</button>
+      </div>
+      <form id="join-group-form">
+        <div class="input-group" style="margin-bottom: 20px;">
+          <label for="invite-code">Invite Code</label>
+          <input id="invite-code" class="input" placeholder="ABCD1234" maxlength="8"
+            style="letter-spacing: 0.15em; font-weight: 700; font-size: 1.125rem; text-align: center;" required />
+        </div>
+        <div id="join-group-error"
+          style="color: var(--accent-danger); font-size: 0.875rem; margin-bottom: 16px; display: none;"></div>
+        <button class="btn btn-primary" style="width: 100%;" id="join-group-btn">
+          Join Group
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Create Trip Modal -->
+  <div class="modal-overlay" id="create-trip-modal" style="display: none;" onclick="closeModal('create-trip-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2> Plan a Trip</h2>
+        <button class="modal-close" onclick="closeModal('create-trip-modal')">✕</button>
+      </div>
+      <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">
+        for <strong id="trip-group-name"></strong>
+      </p>
+      <form id="create-trip-form" class="flex-col gap-md">
+        <input type="hidden" id="trip-group-id" />
+        <div class="input-group">
+          <label for="trip-dest">Destination</label>
+          <input id="trip-dest" class="input" placeholder="Tokyo, Japan " required />
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="input-group">
+            <label for="trip-start">Start Date</label>
+            <input id="trip-start" class="input" type="date" required />
+          </div>
+          <div class="input-group">
+            <label for="trip-end">End Date</label>
+            <input id="trip-end" class="input" type="date" required />
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+          <div class="input-group">
+            <label for="trip-budget">Budget (optional)</label>
+            <input id="trip-budget" class="input" type="number" placeholder="1500" />
+          </div>
+          <div class="input-group">
+            <label for="trip-currency">Currency</label>
+            <select id="trip-currency" class="input">
+              <option value="EUR" selected>EUR</option>
+              <option value="USD">USD</option>
+              <option value="GBP">GBP</option>
+              <option value="RON">RON</option>
+              <option value="JPY">JPY</option>
+            </select>
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="trip-desc">Description (optional)</label>
+          <textarea id="trip-desc" class="input" placeholder="Notes about the trip..."></textarea>
+        </div>
+        <div id="create-trip-error" style="color: var(--accent-danger); font-size: 0.875rem; display: none;"></div>
+        <button class="btn btn-primary btn-lg" id="create-trip-btn">
+          Create Trip
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module">
+  window.showModal = (id) => document.getElementById(id).style.display = 'flex';
+  window.closeModal = (id) => document.getElementById(id).style.display = 'none';
+
+  window.leaveGroup = async (groupId, groupName) => {
+    try {
+      const getCsrfToken = () => document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+      const response = await fetch(`/api/groups/${groupId}/leave/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCsrfToken()
+        }
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || err.detail || 'Failed to leave group');
+      }
+      window.location.reload();
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  window.showGroupTrips = (groupId, groupName) => {
+    document.getElementById('groups-section').style.display = 'none';
+    document.getElementById('trips-section').style.display = 'block';
+    document.getElementById('selected-group-name').textContent = groupName;
+
+    let visibleCount = 0;
+    document.querySelectorAll('.trip-card').forEach(card => {
+      if (card.dataset.groupId == groupId) {
+        card.style.display = 'block';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    const noTripsMsg = document.getElementById('no-trips-message');
+    if (noTripsMsg) {
+      noTripsMsg.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+  };
+
+  window.showGroupsSection = () => {
+    document.getElementById('groups-section').style.display = 'block';
+    document.getElementById('trips-section').style.display = 'none';
+  };
+
+  window.copyToClipboard = (text, btn) => {
+    navigator.clipboard.writeText(text);
+    const originalText = btn.textContent;
+    btn.textContent = '✓ Copied';
+    setTimeout(() => btn.textContent = originalText, 2000);
+  };
+
+  window.openCreateTripModal = (groupId, groupName) => {
+    document.getElementById('trip-group-id').value = groupId;
+    document.getElementById('trip-group-name').textContent = groupName;
+    showModal('create-trip-modal');
+  };
+
+  // Forms
+  document.getElementById('create-group-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('create-group-btn');
+    const err = document.getElementById('create-group-error');
+    const name = document.getElementById('group-name').value;
+
+    btn.disabled = true;
+    err.style.display = 'none';
+
+    try {
+      await window.api.groups.create({ name });
+      window.location.reload();
+    } catch (e) {
+      err.textContent = e.message;
+      err.style.display = 'block';
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('join-group-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('join-group-btn');
+    const err = document.getElementById('join-group-error');
+    const code = document.getElementById('invite-code').value.toUpperCase();
+
+    btn.disabled = true;
+    err.style.display = 'none';
+
+    try {
+      await window.api.groups.join(code);
+      window.location.reload();
+    } catch (e) {
+      err.textContent = e.message;
+      err.style.display = 'block';
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('create-trip-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('create-trip-btn');
+    const err = document.getElementById('create-trip-error');
+
+    btn.disabled = true;
+    err.style.display = 'none';
+
+    const data = {
+      group: document.getElementById('trip-group-id').value,
+      destination: document.getElementById('trip-dest').value,
+      start_date: document.getElementById('trip-start').value,
+      end_date: document.getElementById('trip-end').value,
+      currency: document.getElementById('trip-currency').value,
+      description: document.getElementById('trip-desc').value,
+    };
+    const budget = document.getElementById('trip-budget').value;
+    if (budget) data.budget = parseFloat(budget);
+
+    try {
+      await window.api.trips.create(data);
+      window.location.reload();
+    } catch (e) {
+      err.textContent = e.message;
+      err.style.display = 'block';
+      btn.disabled = false;
+    }
+  });
+</script>
+{% endblock %}
