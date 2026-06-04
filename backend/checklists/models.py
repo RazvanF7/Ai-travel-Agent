@@ -22,5 +22,5 @@ class ChecklistItem(models.Model):
         ordering = ['order', 'created_at']
 
     def __str__(self):
-        status = '✓' if self.is_completed else '○'
+        status = '[x]' if self.is_completed else '[ ]'
         return f'{status} {self.title}'

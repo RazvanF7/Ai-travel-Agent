@@ -41,7 +41,6 @@
         </div>
         {% if trip.budget %}
         <div class="trip-budget-coin">
-          <span style="font-size: 2rem;">💰</span>
           <span class="trip-budget-coin-label">Budget</span>
           <span class="trip-budget-coin-value">{{ trip.budget }} {{ trip.currency }}</span>
         </div>
@@ -62,7 +61,7 @@
         <!-- Itinerary Tab -->
         <div id="tab-itinerary" class="tab-pane">
           <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
-            <button class="btn btn-teal" id="btn-toggle-ai-gen">🗺️ Generate with AI</button>
+            <button class="btn btn-teal" id="btn-toggle-ai-gen">Generate with AI</button>
           </div>
 
           <div id="ai-generator-container" style="display: none; margin-bottom: 24px;">
@@ -92,8 +91,8 @@
             </div>
             <form id="chat-form" class="chat-input-bar" style="position: relative;">
               <input id="chat-input" class="input chat-input-field" placeholder="Type a message..." required />
-              <button type="submit" class="btn btn-primary chat-send-btn" id="btn-send-chat">➤</button>
-              <span style="position: absolute; right: 60px; top: -18px; font-size: 0.625rem; color: var(--text-tertiary); background: var(--bg-glass); padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">🛡️ AI Moderated</span>
+              <button type="submit" class="btn btn-primary chat-send-btn" id="btn-send-chat" style="font-size: 0.8125rem;">Send</button>
+              <span style="position: absolute; right: 80px; top: -18px; font-size: 0.625rem; color: var(--text-tertiary); background: var(--bg-glass); padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">AI Moderated</span>
             </form>
           </div>
         </div>
@@ -192,12 +191,11 @@
         <!-- AI Concierge Preview -->
         <div class="sidebar-card">
           <div class="sidebar-card-header">AI Concierge</div>
-          <div style="text-align: center; margin-bottom: 12px;">
-            <span style="font-size: 3rem;">🤖</span>
-          </div>
-          <div style="display: flex; align-items: center; background: var(--bg-glass); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-full); font-size: 0.8125rem;">
+          <div style="display: flex; align-items: center; background: var(--bg-glass); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-full); font-size: 0.8125rem; margin-top: 12px;">
             <span style="flex: 1; color: var(--text-secondary);">Find me a quiet tea house</span>
-            <span style="background: var(--accent-primary); width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-size: 0.75rem;">🔍</span>
+            <span style="background: var(--accent-primary); width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </span>
           </div>
         </div>
       </div>
@@ -237,7 +235,7 @@
       const items = await window.api.itinerary.list(tripId);
       const container = document.getElementById('itinerary-list');
       if (items.length === 0) {
-        container.innerHTML = '<div class="glass-card-static empty-state"><div class="icon">🗺️</div><h3>No itinerary yet</h3><p>Use the AI generator or add activities manually to build your trip plan!</p></div>';
+        container.innerHTML = '<div class="glass-card-static empty-state"><h3>No itinerary yet</h3><p>Use the AI generator or add activities manually to build your trip plan!</p></div>';
         return;
       }
       
@@ -250,24 +248,23 @@
           currentDay = item.day;
           html += `<div style="margin-bottom: 28px;">
             <h3 class="itinerary-day-header">
-              <span>📅</span> Day ${item.day}
+              Day ${item.day}
             </h3>
             <div style="display: flex; flex-direction: column; gap: 12px;">`;
         }
         
         html += `
           <div class="activity-card">
-            <div class="activity-icon-circle">📍</div>
             <div class="activity-content">
               <div class="activity-title">${item.title}</div>
-              ${item.location ? `<div class="activity-location">📍 ${item.location}</div>` : ''}
+              ${item.location ? `<div class="activity-location">${item.location}</div>` : ''}
               ${item.description ? `<div class="activity-desc">${item.description}</div>` : ''}
               <button class="btn btn-ghost btn-sm" onclick="deleteItineraryItem(${item.id})" style="color: var(--accent-danger); padding: 4px 0; align-self: flex-start; margin-top: 8px; font-size: 0.75rem;">
-                🗑️ Delete
+                Delete
               </button>
             </div>
             <div class="activity-meta">
-              ${item.start_time ? `<div class="activity-time-badge">🕐 ${item.start_time}</div>` : ''}
+              ${item.start_time ? `<div class="activity-time-badge">${item.start_time}</div>` : ''}
               ${item.duration_minutes ? `<div class="activity-duration-badge">${item.duration_minutes}min</div>` : ''}
             </div>
           </div>
@@ -297,7 +294,7 @@
       
       if (items.length === 0) {
         container.innerHTML = '<div style="color: var(--text-tertiary);">No items yet.</div>';
-        sidebarContainer.innerHTML = '<div style="font-size: 0.875rem; color: var(--text-tertiary);">No pending tasks! 🎉</div>';
+        sidebarContainer.innerHTML = '<div style="font-size: 0.875rem; color: var(--text-tertiary);">No pending tasks!</div>';
         return;
       }
       
@@ -309,7 +306,7 @@
               <input type="checkbox" ${item.is_completed ? 'checked' : ''} onchange="toggleChecklist(${item.id})" />
               <span style="${item.is_completed ? 'text-decoration: line-through; color: var(--text-tertiary);' : 'color: var(--text-primary);'}">${item.title}</span>
             </label>
-            <button class="btn btn-ghost btn-sm" onclick="deleteChecklist(${item.id})">🗑️</button>
+            <button class="btn btn-ghost btn-sm" onclick="deleteChecklist(${item.id})" style="color: var(--accent-danger); font-size: 0.75rem;">Delete</button>
           </div>
         `;
       });
@@ -325,7 +322,7 @@
           </div>
         `;
       });
-      if (uncompleted.length === 0) sbHtml = '<div style="font-size: 0.875rem; color: var(--text-tertiary);">No pending tasks! 🎉</div>';
+      if (uncompleted.length === 0) sbHtml = '<div style="font-size: 0.875rem; color: var(--text-tertiary);">No pending tasks!</div>';
       sidebarContainer.innerHTML = sbHtml;
     } catch (e) {
       console.error(e);
@@ -400,7 +397,7 @@
           });
           html += '</div>';
         } else {
-          html += '<div style="margin-top: 24px; padding: 12px; border-radius: var(--radius-md); background: rgba(16,185,129,0.1); color: #10b981; text-align: center;">All debts are settled up! 🎉</div>';
+          html += '<div style="margin-top: 24px; padding: 12px; border-radius: var(--radius-md); background: rgba(16,185,129,0.1); color: #10b981; text-align: center;">All debts are settled up!</div>';
         }
       } catch (debtErr) {
         console.error("Could not load debt summary", debtErr);
@@ -448,7 +445,7 @@
     
     try {
       await window.api.ai.generateItinerary({ trip_id: tripId, prompt });
-      progressDiv.innerHTML = '✅ Done!';
+      progressDiv.innerHTML = 'Done!';
       setTimeout(() => {
         document.getElementById('ai-generator-container').style.display = 'none';
         progressDiv.style.display = 'none';
@@ -456,7 +453,7 @@
         loadItinerary();
       }, 1500);
     } catch (e) {
-      progressDiv.innerHTML = '❌ ' + e.message;
+      progressDiv.innerHTML = 'Error: ' + e.message;
       btn.disabled = false;
     }
   });
@@ -488,12 +485,12 @@
           contentEl.textContent += data.content;
           messages.scrollTop = messages.scrollHeight;
         } else if (data.type === 'complete' || data.type === 'error') {
-          if (data.type === 'error') contentEl.textContent = '❌ ' + data.message;
+          if (data.type === 'error') contentEl.textContent = 'Error: ' + data.message;
           cursorEl.remove();
         }
       });
     } catch (e) {
-      contentEl.textContent = '❌ ' + e.message;
+      contentEl.textContent = 'Error: ' + e.message;
       cursorEl.remove();
     }
   });
@@ -507,7 +504,7 @@
       
       if (messages.length === 0) {
         container.innerHTML = '<div style="color: var(--text-tertiary); text-align: center; margin-top: 20px;">No messages yet. Say hi!</div>';
-        sidebarContainer.innerHTML = '<span style="font-size: 1.5rem">🤖</span> AI: Ask me anything!';
+        sidebarContainer.innerHTML = 'AI: Ask me anything!';
         return;
       }
 
@@ -526,7 +523,6 @@
       const lastMsg = messages[messages.length - 1];
       const isSystemMsg = !lastMsg.sender;
       sidebarContainer.innerHTML = `
-        <span style="font-size: 1.5rem">${isSystemMsg ? '🤖' : '👤'}</span> 
         <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; color: var(--text-secondary);">
           ${isSystemMsg ? 'AI: ' : 'You: '} ${lastMsg.content}
         </span>
@@ -564,7 +560,6 @@
           background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25);
           color: #f87171; font-size: 0.8125rem;
         ">
-          <span>🛡️</span>
           <span>${reason}</span>
         </div>
       </div>`;

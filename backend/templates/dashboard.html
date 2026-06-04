@@ -163,7 +163,7 @@
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h2> Create a Group</h2>
-        <button class="modal-close" onclick="closeModal('create-group-modal')">✕</button>
+        <button class="modal-close" onclick="closeModal('create-group-modal')">&times;</button>
       </div>
       <form id="create-group-form">
         <div class="input-group" style="margin-bottom: 20px;">
@@ -184,7 +184,7 @@
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h2> Join a Group</h2>
-        <button class="modal-close" onclick="closeModal('join-group-modal')">✕</button>
+        <button class="modal-close" onclick="closeModal('join-group-modal')">&times;</button>
       </div>
       <form id="join-group-form">
         <div class="input-group" style="margin-bottom: 20px;">
@@ -206,7 +206,7 @@
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-header">
         <h2> Plan a Trip</h2>
-        <button class="modal-close" onclick="closeModal('create-trip-modal')">✕</button>
+        <button class="modal-close" onclick="closeModal('create-trip-modal')">&times;</button>
       </div>
       <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 20px;">
         for <strong id="trip-group-name"></strong>
@@ -311,7 +311,7 @@
   window.copyToClipboard = (text, btn) => {
     navigator.clipboard.writeText(text);
     const originalText = btn.textContent;
-    btn.textContent = '✓ Copied';
+    btn.textContent = 'Copied';
     setTimeout(() => btn.textContent = originalText, 2000);
   };
 
