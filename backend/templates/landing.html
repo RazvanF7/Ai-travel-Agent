@@ -14,10 +14,6 @@
         <span>🌐</span> Voyage AI Travel
       </div>
       <nav class="hero-nav">
-        <a href="#destinations">Destinations</a>
-        <a href="#how-it-works">Bookings</a>
-        <a href="#ai">AI Agent</a>
-        <a href="#blog">Blog</a>
         <a class="btn btn-primary" href="{% if request.user.is_authenticated %}{% url 'dashboard' %}{% else %}{% url 'login' %}{% endif %}">Plan a Trip</a>
       </nav>
     </header>
