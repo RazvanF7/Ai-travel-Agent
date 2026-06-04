@@ -127,7 +127,7 @@ def _save_itinerary_and_message(trip_id, destination, activities):
                 Message.objects.create(
                     group_id=trip_obj.group_id,
                     sender=bot_user,
-                    content=f'🗺️ Pathfinder generated a new itinerary for {destination}. Tap to view.',
+                    content=f'Pathfinder generated a new itinerary for {destination}. Tap to view.',
                     message_type='ai',
                 )
             except Exception as msg_err:

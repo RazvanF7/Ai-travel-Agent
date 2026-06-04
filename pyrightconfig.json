@@ -1,0 +1,11 @@
+{
+    "venvPath": "/home/razvan/Desktop/Ai Travel Agent/backend",
+    "venv": "venv",
+    "pythonVersion": "3.12",
+    "executionEnvironments": [
+        {
+            "root": "backend",
+            "extraPaths": []
+        }
+    ]
+}

@@ -30,11 +30,21 @@ async function request(endpoint, options = {}) {
   });
 
   if (response.status === 401 || response.status === 403) {
-      if (response.status === 403 && window.location.pathname.startsWith('/login')) {
-          // don't redirect if we're trying to log in
+      if (response.status === 403) {
+          // Check if this is a moderation block (not an auth issue)
+          const cloned = response.clone();
+          const body = await cloned.json().catch(() => ({}));
+          if (body.moderated) {
+              // Let the caller handle moderation errors
+              throw new Error(body.error || 'Message blocked by moderator.');
+          }
+          if (!window.location.pathname.startsWith('/login')) {
+              window.location.href = '/login/';
+              throw new Error('Session expired');
+          }
       } else {
-        window.location.href = '/login/';
-        throw new Error('Session expired');
+          window.location.href = '/login/';
+          throw new Error('Session expired');
       }
   }
 
