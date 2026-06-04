@@ -23,7 +23,7 @@
     {% block content %}{% endblock %}
 
     <script type="module">
-        import * as api from "{% static 'js/api.js' %}";
+        import * as api from "{% static 'js/api.js' %}?t={% now 'U' %}";
         window.api = api; // Expose to global scope for easy use in inline scripts
     </script>
     

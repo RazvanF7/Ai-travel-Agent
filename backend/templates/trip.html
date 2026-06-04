@@ -90,9 +90,10 @@
             <div id="chat-messages" class="chat-messages">
               Loading chat...
             </div>
-            <form id="chat-form" class="chat-input-bar">
+            <form id="chat-form" class="chat-input-bar" style="position: relative;">
               <input id="chat-input" class="input chat-input-field" placeholder="Type a message..." required />
               <button type="submit" class="btn btn-primary chat-send-btn" id="btn-send-chat">➤</button>
+              <span style="position: absolute; right: 60px; top: -18px; font-size: 0.625rem; color: var(--text-tertiary); background: var(--bg-glass); padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">🛡️ AI Moderated</span>
             </form>
           </div>
         </div>
@@ -542,13 +543,48 @@
     const input = document.getElementById('chat-input');
     const content = input.value.trim();
     if (!content) return;
-    
+
     input.value = '';
     try {
       await window.api.chat.send(groupId, content);
       loadChat();
-    } catch (e) {
-      alert(e.message);
+    } catch (err) {
+      // Show moderation warning as a temporary bubble in the chat
+      const container = document.getElementById('chat-messages');
+      const warningId = 'mod-warn-' + Date.now();
+      const reason = err.message || 'Message was not allowed.';
+
+      const warningHtml = `<div id="${warningId}" class="message" style="
+        align-self: center; text-align: center; margin: 12px auto;
+        max-width: 85%; animation: fadeInUp 0.3s ease;
+      ">
+        <div style="
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 10px 18px; border-radius: 12px;
+          background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25);
+          color: #f87171; font-size: 0.8125rem;
+        ">
+          <span>🛡️</span>
+          <span>${reason}</span>
+        </div>
+      </div>`;
+
+      container.insertAdjacentHTML('beforeend', warningHtml);
+      container.scrollTop = container.scrollHeight;
+
+      // Restore message so user can edit it
+      input.value = content;
+      input.focus();
+
+      // Fade out and remove after 6 seconds
+      setTimeout(() => {
+        const el = document.getElementById(warningId);
+        if (el) {
+          el.style.transition = 'opacity 0.5s ease';
+          el.style.opacity = '0';
+          setTimeout(() => el.remove(), 500);
+        }
+      }, 6000);
     }
   });
 
