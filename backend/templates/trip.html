@@ -82,6 +82,12 @@
           <div id="itinerary-list">
             Loading itinerary...
           </div>
+
+          <div id="submit-reviews-container" style="display: none; text-align: center;">
+            <button class="btn-submit-reviews" id="btn-submit-reviews">
+              ⭐ Submit Reviews
+            </button>
+          </div>
         </div>
 
         <!-- Chat Tab -->
@@ -254,13 +260,22 @@
             <div style="display: flex; flex-direction: column; gap: 12px;">`;
         }
         
+        const uid = `star-${item.id}`;
         html += `
-          <div class="activity-card">
+          <div class="activity-card" data-activity-id="${item.id}" data-activity-title="${item.title.replace(/"/g, '&quot;')}">
             <div class="activity-icon-circle">📍</div>
             <div class="activity-content">
               <div class="activity-title">${item.title}</div>
               ${item.location ? `<div class="activity-location">📍 ${item.location}</div>` : ''}
               ${item.description ? `<div class="activity-desc">${item.description}</div>` : ''}
+              <div class="star-rating" id="rating-${item.id}">
+                <input type="radio" id="${uid}-5" name="${uid}" value="5"/><label for="${uid}-5">★</label>
+                <input type="radio" id="${uid}-4" name="${uid}" value="4"/><label for="${uid}-4">★</label>
+                <input type="radio" id="${uid}-3" name="${uid}" value="3"/><label for="${uid}-3">★</label>
+                <input type="radio" id="${uid}-2" name="${uid}" value="2"/><label for="${uid}-2">★</label>
+                <input type="radio" id="${uid}-1" name="${uid}" value="1"/><label for="${uid}-1">★</label>
+              </div>
+              <div class="star-rating-label">Rate this activity</div>
               <button class="btn btn-ghost btn-sm" onclick="deleteItineraryItem(${item.id})" style="color: var(--accent-danger); padding: 4px 0; align-self: flex-start; margin-top: 8px; font-size: 0.75rem;">
                 🗑️ Delete
               </button>
@@ -282,7 +297,7 @@
   window.deleteItineraryItem = async (itemId) => {
     try {
       await window.api.itinerary.delete(tripId, itemId);
-      loadItinerary();
+      loadItineraryWithReviews();
     } catch (e) {
       alert(e.message);
     }
@@ -452,7 +467,7 @@
         document.getElementById('ai-generator-container').style.display = 'none';
         progressDiv.style.display = 'none';
         btn.disabled = false;
-        loadItinerary();
+        loadItineraryWithReviews();
       }, 1500);
     } catch (e) {
       progressDiv.innerHTML = '❌ ' + e.message;
@@ -552,8 +567,78 @@
     }
   });
 
+  // Show/hide submit reviews button based on itinerary content
+  function updateSubmitReviewsButton() {
+    const container = document.getElementById('submit-reviews-container');
+    const cards = document.querySelectorAll('.activity-card[data-activity-id]');
+    container.style.display = cards.length > 0 ? 'block' : 'none';
+  }
+
+  // Submit Reviews handler
+  document.getElementById('btn-submit-reviews').addEventListener('click', async () => {
+    const cards = document.querySelectorAll('.activity-card[data-activity-id]');
+    const reviews = [];
+
+    cards.forEach(card => {
+      const activityId = parseInt(card.dataset.activityId);
+      const activityTitle = card.dataset.activityTitle;
+      const checkedStar = card.querySelector('.star-rating input:checked');
+      if (checkedStar) {
+        reviews.push({
+          activity_id: activityId,
+          activity_title: activityTitle,
+          rating: parseInt(checkedStar.value),
+        });
+      }
+    });
+
+    if (reviews.length === 0) {
+      showToast('Please rate at least one activity before submitting.', true);
+      return;
+    }
+
+    const btn = document.getElementById('btn-submit-reviews');
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+
+    try {
+      await window.api.itinerary.submitReviews(tripId, reviews);
+      showToast(`✅ ${reviews.length} review${reviews.length > 1 ? 's' : ''} submitted successfully!`);
+      // Clear all star selections
+      document.querySelectorAll('.star-rating input:checked').forEach(input => input.checked = false);
+    } catch (e) {
+      showToast('❌ ' + e.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '⭐ Submit Reviews';
+    }
+  });
+
+  function showToast(message, isError = false) {
+    // Remove any existing toast
+    const existing = document.querySelector('.review-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'review-toast' + (isError ? ' error' : '');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.animation = 'toastSlideOut 0.3s ease forwards';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  }
+
+  // Patch loadItinerary to show submit button after loading
+  const _origLoadItinerary = loadItinerary;
+  async function loadItineraryWithReviews() {
+    await _origLoadItinerary();
+    updateSubmitReviewsButton();
+  }
+
   // Initial load
-  loadItinerary();
+  loadItineraryWithReviews();
   loadChecklists();
   loadExpenses();
   loadChat();

@@ -7,4 +7,5 @@ urlpatterns = [
     path('<int:trip_id>/itinerary/', views.ItineraryItemListCreateView.as_view(), name='itinerary-list-create'),
     path('<int:trip_id>/itinerary/<int:pk>/', views.ItineraryItemDetailView.as_view(), name='itinerary-detail'),
     path('<int:trip_id>/itinerary/reorder/', views.reorder_itinerary, name='itinerary-reorder'),
+    path('<int:trip_id>/reviews/', views.submit_reviews, name='submit-reviews'),
 ]
