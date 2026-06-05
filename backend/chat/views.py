@@ -78,6 +78,19 @@ class SendMessageView(View):
         if not content:
             return JsonResponse({'error': 'Message content is required'}, status=400)
 
+        # AI Moderation — check message before saving
+        from ai_agents.moderator import moderate_message
+        sender_name = request.user.first_name or request.user.username
+        moderation = moderate_message(content, sender_name=sender_name)
+
+        if not moderation.get('allowed', True):
+            reason = moderation.get('reason', 'Message flagged by AI moderator.')
+            return JsonResponse({
+                'error': f'Message blocked: {reason}',
+                'moderated': True,
+                'reason': reason,
+            }, status=403)
+
         msg = Message.objects.create(
             group_id=group_id,
             sender=request.user,
