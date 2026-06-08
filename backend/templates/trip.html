@@ -10,7 +10,8 @@
   <!-- Header -->
   <header class="trip-header">
     <div style="display: flex; align-items: center; gap: 16px;">
-      <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm" style="color: var(--text-primary); text-decoration: none;">
+      <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm"
+        style="color: var(--text-primary); text-decoration: none;">
         ← Back
       </a>
       <div class="trip-logo">
@@ -70,7 +71,8 @@
               <form id="ai-gen-form">
                 <div class="input-group" style="margin-bottom: 16px;">
                   <label>Travel Style & Preferences</label>
-                  <textarea id="ai-gen-prompt" class="input" placeholder="E.g., relaxed pace, focused on food and history..." required></textarea>
+                  <textarea id="ai-gen-prompt" class="input"
+                    placeholder="E.g., relaxed pace, focused on food and history..." required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary" id="btn-run-ai-gen">Generate Itinerary</button>
               </form>
@@ -91,8 +93,11 @@
             </div>
             <form id="chat-form" class="chat-input-bar" style="position: relative;">
               <input id="chat-input" class="input chat-input-field" placeholder="Type a message..." required />
-              <button type="submit" class="btn btn-primary chat-send-btn" id="btn-send-chat" style="font-size: 0.8125rem;">Send</button>
-              <span style="position: absolute; right: 80px; top: -18px; font-size: 0.625rem; color: var(--text-tertiary); background: var(--bg-glass); padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">AI Moderated</span>
+              <button type="submit" class="btn btn-primary chat-send-btn" id="btn-send-chat"
+                style="font-size: 0.8125rem;">Send</button>
+              <span
+                style="position: absolute; right: 80px; top: -18px; font-size: 0.625rem; color: var(--text-tertiary); background: var(--bg-glass); padding: 2px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-subtle);">AI
+                Moderated</span>
             </form>
           </div>
         </div>
@@ -149,13 +154,15 @@
         <!-- AI Concierge Tab -->
         <div id="tab-concierge" class="tab-pane" style="display: none;">
           <div class="glass-card-static" style="height: 500px; display: flex; flex-direction: column;">
-            <div id="concierge-messages" style="flex: 1; overflow-y: auto; padding: 16px; background: var(--bg-primary); margin-bottom: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+            <div id="concierge-messages"
+              style="flex: 1; overflow-y: auto; padding: 16px; background: var(--bg-primary); margin-bottom: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
               <div class="message assistant">
                 <div class="message-bubble">Hi! I'm your AI Concierge for {{ trip.destination }}. How can I help?</div>
               </div>
             </div>
             <form id="concierge-form" style="display: flex; gap: 8px;">
-              <input id="concierge-input" class="input" style="flex: 1;" placeholder="Ask about places to eat, things to do..." required />
+              <input id="concierge-input" class="input" style="flex: 1;"
+                placeholder="Ask about places to eat, things to do..." required />
               <button type="submit" class="btn btn-primary" id="btn-send-concierge">Ask</button>
             </form>
           </div>
@@ -175,7 +182,7 @@
             <span style="color: var(--text-tertiary)">Loading chat...</span>
           </div>
         </div>
-        
+
         <!-- Checklist Preview -->
         <div class="sidebar-card">
           <div class="sidebar-card-header">Checklist</div>
@@ -191,18 +198,25 @@
         <!-- AI Concierge Preview -->
         <div class="sidebar-card">
           <div class="sidebar-card-header">AI Concierge</div>
-          <div style="display: flex; align-items: center; background: var(--bg-glass); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-full); font-size: 0.8125rem; margin-top: 12px;">
+          <div
+            style="display: flex; align-items: center; background: var(--bg-glass); border: 1px solid var(--border-subtle); padding: 8px 12px; border-radius: var(--radius-full); font-size: 0.8125rem; margin-top: 12px;">
             <span style="flex: 1; color: var(--text-secondary);">Find me a quiet tea house</span>
-            <span style="background: var(--accent-primary); width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center;">
-              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span
+              style="background: var(--accent-primary); width: 24px; height: 24px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
             </span>
           </div>
         </div>
       </div>
     </div>
   </div>
-  
-  <footer style="background: var(--bg-secondary); border-top: 1px solid var(--border-subtle); padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 0.875rem; margin-top: 40px;">
+
+  <footer
+    style="background: var(--bg-secondary); border-top: 1px solid var(--border-subtle); padding: 16px; text-align: center; color: var(--text-tertiary); font-size: 0.875rem; margin-top: 40px;">
     © 2026 Voyage AI Travel
   </footer>
 </div>
@@ -213,16 +227,16 @@
   const tripId = {{ trip.id }};
   const groupId = {{ trip.group.id }};
   const currentUserId = {{ request.user.id }};
-  
+
   // Tab Switching
   const tabs = document.querySelectorAll('.trip-tab');
   const panes = document.querySelectorAll('.tab-pane');
-  
+
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       tabs.forEach(t => t.classList.remove('active'));
       panes.forEach(p => p.style.display = 'none');
-      
+
       tab.classList.add('active');
       const targetId = 'tab-' + tab.getAttribute('data-tab');
       document.getElementById(targetId).style.display = 'block';
@@ -238,10 +252,10 @@
         container.innerHTML = '<div class="glass-card-static empty-state"><h3>No itinerary yet</h3><p>Use the AI generator or add activities manually to build your trip plan!</p></div>';
         return;
       }
-      
+
       let html = '';
       let currentDay = -1;
-      
+
       items.forEach(item => {
         if (item.day !== currentDay) {
           if (currentDay !== -1) html += '</div></div>';
@@ -252,7 +266,7 @@
             </h3>
             <div style="display: flex; flex-direction: column; gap: 12px;">`;
         }
-        
+
         html += `
           <div class="activity-card">
             <div class="activity-content">
@@ -291,13 +305,13 @@
       const items = await window.api.checklists.list(tripId);
       const container = document.getElementById('checklist-items');
       const sidebarContainer = document.getElementById('sidebar-checklist');
-      
+
       if (items.length === 0) {
         container.innerHTML = '<div style="color: var(--text-tertiary);">No items yet.</div>';
         sidebarContainer.innerHTML = '<div style="font-size: 0.875rem; color: var(--text-tertiary);">No pending tasks!</div>';
         return;
       }
-      
+
       let html = '';
       items.forEach(item => {
         html += `
@@ -311,7 +325,7 @@
         `;
       });
       container.innerHTML = html;
-      
+
       const uncompleted = items.filter(i => !i.is_completed).slice(0, 3);
       let sbHtml = '';
       uncompleted.forEach(item => {
@@ -364,12 +378,12 @@
       const expenses = await window.api.finance.expenses(tripId);
       const summaryContainer = document.getElementById('expense-summary');
       const sidebarContainer = document.getElementById('sidebar-expenses');
-      
+
       let total = 0;
       expenses.forEach(e => total += parseFloat(e.amount));
-      
+
       let html = `<div style="font-size: 2rem; font-weight: 700; color: var(--text-primary);">${total.toFixed(2)} ${'{{ trip.currency }}'}</div><div style="color: var(--text-secondary); margin-bottom: 16px;">Total Trip Expenses</div>`;
-      
+
       if (expenses.length > 0) {
         html += '<div style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; margin-bottom: 16px;">';
         expenses.forEach(e => {
@@ -402,7 +416,7 @@
       } catch (debtErr) {
         console.error("Could not load debt summary", debtErr);
       }
-      
+
       summaryContainer.innerHTML = html;
       sidebarContainer.innerHTML = `<div style="font-size: 1.5rem; font-weight: 700; text-align: center; color: var(--text-primary);">${total.toFixed(2)} ${'{{ trip.currency }}'}</div>`;
     } catch (e) {
@@ -438,11 +452,11 @@
     const prompt = document.getElementById('ai-gen-prompt').value;
     const progressDiv = document.getElementById('ai-gen-progress');
     const btn = document.getElementById('btn-run-ai-gen');
-    
+
     btn.disabled = true;
     progressDiv.style.display = 'block';
     progressDiv.innerHTML = '<span class="animate-pulse">Generating itinerary...</span>';
-    
+
     try {
       await window.api.ai.generateItinerary({ trip_id: tripId, prompt });
       progressDiv.innerHTML = 'Done!';
@@ -464,20 +478,20 @@
     const input = document.getElementById('concierge-input');
     const question = input.value;
     const messages = document.getElementById('concierge-messages');
-    
+
     input.value = '';
-    
+
     messages.innerHTML += `<div class="message user"><div class="message-bubble">${question}</div></div>`;
     messages.scrollTop = messages.scrollHeight;
-    
+
     const aiId = 'ai-msg-' + Date.now();
     messages.innerHTML += `<div class="message assistant" id="${aiId}"><div class="message-bubble"><span class="content"></span><span class="cursor" style="color: var(--accent-primary);">▊</span></div></div>`;
     messages.scrollTop = messages.scrollHeight;
-    
+
     const aiMsgEl = document.getElementById(aiId);
     const contentEl = aiMsgEl.querySelector('.content');
     const cursorEl = aiMsgEl.querySelector('.cursor');
-    
+
     try {
       const response = await window.api.ai.concierge({ question, trip_id: tripId });
       await window.api.readSSEStream(response, (data) => {
@@ -501,7 +515,7 @@
       const messages = await window.api.chat.history(groupId);
       const container = document.getElementById('chat-messages');
       const sidebarContainer = document.getElementById('sidebar-chat');
-      
+
       if (messages.length === 0) {
         container.innerHTML = '<div style="color: var(--text-tertiary); text-align: center; margin-top: 20px;">No messages yet. Say hi!</div>';
         sidebarContainer.innerHTML = 'AI: Ask me anything!';

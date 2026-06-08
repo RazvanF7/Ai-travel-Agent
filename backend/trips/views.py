@@ -1,9 +1,12 @@
 import json
+import os
+from datetime import datetime
 from django.http import JsonResponse
 from django.views import View
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 from .models import Trip, ItineraryItem
 from groups.models import GroupMembership
 from groups.models import Group
@@ -211,3 +214,57 @@ def reorder_itinerary(request, trip_id):
 
     items = ItineraryItem.objects.filter(trip_id=trip_id).order_by('day', 'order')
     return JsonResponse([serialize_itinerary_item(item) for item in items], safe=False)
+
+
+@csrf_exempt
+@jwt_required
+def submit_reviews(request, trip_id):
+    """Submit star ratings for itinerary activities and log them to a file."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        body = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+
+    reviews = body.get('reviews', [])
+    if not reviews:
+        return JsonResponse({'error': 'No reviews provided'}, status=400)
+
+    # Get trip info for the log
+    try:
+        trip = Trip.objects.get(id=trip_id)
+    except Trip.DoesNotExist:
+        return JsonResponse({'error': 'Trip not found'}, status=404)
+
+    # Build log entries
+    log_file = os.path.join(settings.BASE_DIR, 'reviews.log')
+    timestamp = datetime.now().isoformat()
+
+    entries = []
+    for review in reviews:
+        entry = {
+            'timestamp': timestamp,
+            'user_id': request.user.id,
+            'username': request.user.username or request.user.email,
+            'trip_id': trip_id,
+            'destination': trip.destination,
+            'activity_id': review.get('activity_id'),
+            'activity_title': review.get('activity_title', ''),
+            'rating': review.get('rating', 0),
+        }
+        entries.append(entry)
+
+    # Append to log file
+    try:
+        with open(log_file, 'a', encoding='utf-8') as f:
+            for entry in entries:
+                f.write(json.dumps(entry) + '\n')
+    except IOError as e:
+        return JsonResponse({'error': f'Failed to write reviews: {str(e)}'}, status=500)
+
+    return JsonResponse({
+        'status': 'success',
+        'logged': len(entries),
+    })

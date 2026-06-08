@@ -110,6 +110,7 @@ export const itinerary = {
   update: (tripId, itemId, data) => request(`/trips/${tripId}/itinerary/${itemId}/`, { method: 'PATCH', body: JSON.stringify(data) }),
   delete: (tripId, itemId) => request(`/trips/${tripId}/itinerary/${itemId}/`, { method: 'DELETE' }),
   reorder: (tripId, itemIds) => request(`/trips/${tripId}/itinerary/reorder/`, { method: 'POST', body: JSON.stringify({ item_ids: itemIds }) }),
+  submitReviews: (tripId, reviews) => request(`/trips/${tripId}/reviews/`, { method: 'POST', body: JSON.stringify({ reviews }) }),
 };
 
 /* ═══ Chat ═══ */
