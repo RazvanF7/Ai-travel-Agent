@@ -181,3 +181,104 @@ Key principles we followed:
 - **AI for learning, not bypassing.** When an AI tool introduced an unfamiliar concept (e.g., Django Channels consumer lifecycle, async generators for streaming), team members took the time to understand the underlying mechanism before using it.
 - **Human-driven architecture.** All high-level design decisions (database schema, module boundaries, API contracts, WebSocket message protocols) were made by the team. AI tools helped implement those decisions, not make them.
 
+## Automated Tests
+
+The project uses **Playwright** for end-to-end (E2E) browser testing. All test files live in the `e2e/` directory and are executed against a running Django backend with an ephemeral PostgreSQL database.
+
+### Test Configuration
+
+The Playwright configuration (`playwright.config.js`) defines:
+- **Test directory:** `./e2e`
+- **Timeout:** 30 seconds per test, 5 seconds for assertions
+- **Browsers:** Chromium and Firefox (parallel execution locally, sequential in CI)
+- **Retries:** 2 retries in CI, none locally
+- **Evidence capture:** HTML report, screenshots on failure, video retained on failure, trace on first retry
+- **Web server:** Playwright auto-starts the Django dev server at `http://127.0.0.1:8000` before running tests
+
+### Test Helper Utilities
+
+The file `e2e/helpers.js` provides reusable functions shared across all test suites:
+- `signUpUser(page, firstName)` -- registers a new user with a unique timestamped email, fills the signup form, and waits for redirect to the dashboard
+- `createGroup(page, name)` -- opens the Create Group modal, fills in the name, submits, and verifies the group card appears
+- `createTrip(page, groupName, destination)` -- creates a trip within a group, filling destination, dates, budget, currency, and description
+
+### Test Suites
+
+| Test File | Module Covered | What It Tests |
+|---|---|---|
+| `landing.spec.js` | Landing Page | Page rendering, hero section content, navigation links, CTA buttons |
+| `login.spec.js` | Authentication | Signup form validation, successful registration with redirect, login/logout flow |
+| `dashboard.spec.js` | Dashboard | Layout rendering (header, welcome, quick actions), group card toggling between groups/trips views, invite code copy-to-clipboard |
+| `group_actions.spec.js` | Group Management | Create Group modal open/close/validation, Join Group modal with invalid code error handling |
+| `trip_actions.spec.js` | Trip Creation | Trip modal validation, full trip creation with all fields, trip card rendering with duration badge and budget, navigation to trip detail page |
+| `itinerary.spec.js` | AI Itinerary | Mocked WebSocket AI streaming, itinerary generation progress feedback, parsed activity cards rendered after completion |
+| `expenses.spec.js` | Expense Tracking | Expense tab rendering, logging an expense with amount/description/category, summary and sidebar total updates |
+| `checklist.spec.js` | Checklists | Empty state placeholder, adding items via Enter key, checkbox toggling with strikethrough style, sidebar preview sync, item deletion |
+| `ai_concierge.spec.js` | AI Concierge | Concierge tab greeting, mocked SSE streaming response, user/assistant message display, cursor removal on stream completion |
+
+### Running Tests Locally
+
+```bash
+npx playwright install --with-deps    # first time only
+npx playwright test                   # run all suites
+npx playwright test e2e/login.spec.js # run a single suite
+npx playwright show-report            # open the HTML report
+```
+
+## CI/CD Workflows
+
+The project uses **GitHub Actions** with two workflows defined in `.github/workflows/`.
+
+### 1. Playwright E2E Tests (`playwright.yml`)
+
+**Trigger:** Runs on every push and pull request to the `main` and `rebase` branches.
+
+**What it does:**
+1. Spins up an **ephemeral PostgreSQL 15** service container with a throwaway `travel_db` database (test credentials injected via environment variables)
+2. Sets up **Python 3.11** and installs backend dependencies from `requirements.txt`
+3. Runs `python backend/manage.py migrate` to create tables in the throwaway database
+4. Sets up **Node.js** (LTS) and installs frontend dependencies
+5. Installs **Playwright browsers** with system dependencies
+6. Executes `npx playwright test` (single worker in CI, 2 retries on failure)
+7. Uploads the **Playwright HTML report** as a build artifact (retained for 30 days)
+
+The workflow ensures that no pull request can be merged without all E2E tests passing against a fresh database.
+
+### 2. Deploy to VPS (`deploy.yml`)
+
+**Trigger:** Runs on every push to the `rebase` branch.
+
+**What it does:**
+1. Installs SSH tools (`openssh-client`, `sshpass`)
+2. Adds the VPS host to `known_hosts`
+3. Connects to the VPS via SSH using credentials stored in **GitHub Secrets** (`VPS_HOST`, `VPS_USER`, `VPS_PASSWORD`)
+4. On the server:
+   - Fetches the latest code and hard-resets to `origin/rebase`
+   - Tears down existing Docker containers (`docker compose down`)
+   - Rebuilds and starts all services (`docker compose up -d --build --force-recreate`)
+   - Prunes unused Docker images to reclaim disk space
+
+### Deployment Infrastructure
+
+The production environment is containerized using **Docker Compose** with three services:
+
+| Service | Image | Role |
+|---|---|---|
+| `redis` | `redis:7-alpine` | Channel layer backend and Celery broker |
+| `backend` | Custom (Python 3.11 slim) | Django application served by Gunicorn (3 workers, 3 threads) |
+| `nginx` | `nginx:alpine` | Reverse proxy, static/media file serving, request routing |
+
+**Backend Dockerfile** (`backend/Dockerfile`):
+- Base image: `python:3.11-slim`
+- Installs system dependencies, Python packages from `requirements.txt`
+- Runs via `entrypoint.sh` which handles migrations, static file collection, and starts Gunicorn
+
+**Nginx** (`nginx/nginx.conf`):
+- Serves the application on port 80 for `ilovemds.com`
+- Routes `/api/` and `/admin/` to the Django backend with proxy buffering disabled (required for SSE streaming)
+- Serves `/static/` and `/media/` directly from Docker volumes with aggressive caching (1-year expiry)
+- All other routes are proxied to the backend (SPA fallback)
+
+**Data persistence** is handled through four named Docker volumes: `redis_data`, `db_data`, `staticfiles_data`, and `media_data`.
+
+
