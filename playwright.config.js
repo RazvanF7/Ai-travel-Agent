@@ -32,9 +32,8 @@ export default defineConfig({
 
   ],
   webServer: {
-    command: 'backend/venv/bin/python backend/manage.py runserver',
+    command: 'python backend/manage.py runserver 127.0.0.1:8000',
     url: 'http://127.0.0.1:8000',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
   },
 });
