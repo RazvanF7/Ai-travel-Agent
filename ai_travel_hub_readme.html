@@ -412,6 +412,86 @@
 
   /* ── DIVIDER ── */
   .divider { height: 0.5px; background: var(--border); margin: 0 1.5rem; }
+
+  /* ── RESPONSIVE: center on desktop ── */
+  .readme-root { margin: 0 auto; }
+
+  /* ── RESPONSIVE: inline grids need classes ── */
+  .apps-grid-inline { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .docker-grid-inline { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0; }
+
+  /* ── RESPONSIVE: table wrapper ── */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* ══════════════════════════════════════════════
+     MOBILE BREAKPOINT — max-width: 600px
+     ══════════════════════════════════════════════ */
+  @media (max-width: 600px) {
+    .readme-root { max-width: 100%; }
+
+    /* Hero */
+    .hero { padding: 1.5rem 1rem 1.25rem; }
+    .hero-title { font-size: 1.6rem; }
+    .hero-sub { font-size: 13px; }
+
+    /* TOC */
+    .toc { margin: 1rem 1rem 0; padding: 1rem; }
+
+    /* Sections */
+    .section { padding: 1.5rem 1rem 0; }
+    .divider { margin: 0 1rem; }
+
+    /* Component grid — 2 columns on mobile */
+    .component-grid { grid-template-columns: 1fr 1fr; }
+
+    /* Agent cards — stack vertically */
+    .agent-cards { grid-template-columns: 1fr; }
+
+    /* Pipeline — stack vertically */
+    .pipeline-row { flex-direction: column; }
+    .pipeline-stage { border-right: none !important; border-bottom: 0.5px solid var(--border); }
+    .pipeline-stage:last-child { border-bottom: none; }
+
+    /* Summary — single column */
+    .summary-grid { grid-template-columns: 1fr; }
+
+    /* Apps grid — single column */
+    .apps-grid-inline { grid-template-columns: 1fr; }
+    .apps-cell { border-right: none !important; border-bottom: 0.5px solid var(--border) !important; }
+    .apps-cell:last-child { border-bottom: none !important; }
+
+    /* Docker grid — single column */
+    .docker-grid-inline { grid-template-columns: 1fr; }
+    .docker-cell { border-right: none !important; border-bottom: 0.5px solid var(--border); }
+    .docker-cell:last-child { border-bottom: none; }
+
+    /* Secret rows — stack key/value */
+    .secret-row { flex-direction: column; gap: 2px; }
+    .secret-key { min-width: unset; }
+
+    /* Table — horizontal scroll */
+    .data-table { min-width: 480px; }
+
+    /* Flow steps — smaller dots */
+    .flow-label { font-size: 12px; word-break: break-word; }
+    .flow-sub { font-size: 11px; }
+
+    /* Diagram labels */
+    .diagram-label { font-size: 9px; padding: .4rem .6rem; }
+
+    /* Badge row */
+    .badge-row { gap: 4px; }
+    .badge { font-size: 10px; padding: 2px 6px; }
+  }
+
+  /* ══════════════════════════════════════════════
+     SMALL MOBILE — max-width: 380px
+     ══════════════════════════════════════════════ */
+  @media (max-width: 380px) {
+    .hero-title { font-size: 1.35rem; }
+    .component-grid { grid-template-columns: 1fr; }
+    .section-title { font-size: 1rem; }
+  }
 </style>
 </head>
 <body>
@@ -544,7 +624,7 @@
 
     <div class="diagram-container">
       <div class="diagram-label"><i class="ti ti-layout-grid" aria-hidden="true"></i> Aplicații Django</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+      <div class="apps-grid-inline">
         <div class="apps-cell">
           <div class="apps-cell-label">Accounts</div>
           <div class="apps-cell-value">JWT Auth, Google OAuth, UserProfile</div>
@@ -577,6 +657,7 @@
 
     <div class="diagram-container">
       <div class="diagram-label"><i class="ti ti-table" aria-hidden="true"></i> Tabele principale</div>
+      <div class="table-scroll">
       <table class="data-table" style="margin:0">
         <thead>
           <tr>
@@ -598,6 +679,7 @@
           <tr><td>DebtSplit</td><td>status (pending|paid), paid_at, unique(tx,debtor)</td><td>→ Transaction, auth_user</td></tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <div class="diagram-container">
@@ -817,7 +899,7 @@
 
     <div class="diagram-container">
       <div class="diagram-label"><i class="ti ti-brand-docker" aria-hidden="true"></i> Docker Compose stack (producție)</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;">
+      <div class="docker-grid-inline">
         <div class="docker-cell">
           <div class="docker-cell-label">nginx:alpine</div>
           <div class="docker-cell-value">Port 80:80 — proxy pass + fișiere statice (ro mount)</div>

@@ -765,3 +765,104 @@
     transform: translateY(20px) scale(0.95);
   }
 }
+
+/* ═══════════════════════════════════════════════
+   Trip Page — Responsive
+   ═══════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Header */
+  .trip-header { padding: 0 12px; }
+  .trip-logo { font-size: 1.0625rem; gap: 6px; }
+  .trip-user-menu { gap: 8px; }
+
+  /* Hero */
+  .trip-hero { height: 160px; padding: 16px; border-radius: var(--radius-lg); }
+  .trip-hero-title { font-size: 1.5rem; }
+  .trip-hero-meta { font-size: 0.8125rem; gap: 10px; flex-wrap: wrap; }
+
+  /* Budget coin — smaller on mobile */
+  .trip-budget-coin {
+    width: 90px; height: 90px;
+    right: 12px; top: 12px;
+  }
+  .trip-budget-coin-label { font-size: 0.625rem; }
+  .trip-budget-coin-value { font-size: 1rem; }
+
+  /* Layout */
+  .trip-layout-grid { padding: 16px; gap: 16px; }
+
+  /* Tabs — horizontal scroll */
+  .trip-tabs-container {
+    gap: 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    margin-bottom: 16px;
+  }
+  .trip-tab {
+    font-size: 0.8125rem;
+    padding: 10px 0;
+    min-width: max-content;
+    white-space: nowrap;
+    flex: none;
+    padding: 10px 16px;
+  }
+
+  /* Activity cards — stack vertically */
+  .activity-card {
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+  }
+  .activity-meta {
+    width: 100%;
+    flex-direction: row;
+    border-left: none;
+    border-top: 1px solid var(--border-subtle);
+    padding-top: 10px;
+    justify-content: flex-start;
+    gap: 16px;
+  }
+  .activity-icon-circle { width: 44px; height: 44px; min-width: 44px; font-size: 1.25rem; }
+
+  /* Sidebar */
+  .sidebar-container { gap: 12px; }
+  .sidebar-card { padding: 16px; }
+
+  /* Chat window */
+  .chat-window { height: 400px; }
+  .chat-input-bar { padding: 8px 12px; }
+
+  /* AI Generator cards */
+  .ai-gen-activity-card { padding: 10px 12px; gap: 10px; }
+  .ai-gen-activity-icon { width: 36px; min-width: 36px; height: 36px; font-size: 1rem; }
+
+  /* Itinerary day header */
+  .itinerary-day-header { margin: 20px 0 12px; font-size: 1rem; }
+
+  /* Review toast */
+  .review-toast {
+    right: 16px; left: 16px; bottom: 16px;
+    width: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .trip-hero { height: 140px; padding: 12px; }
+  .trip-hero-title { font-size: 1.25rem; }
+  .trip-hero-badge { font-size: 0.6875rem; padding: 3px 8px; }
+
+  .trip-budget-coin {
+    width: 72px; height: 72px;
+    right: 8px; top: 8px;
+  }
+  .trip-budget-coin-label { font-size: 0.5625rem; }
+  .trip-budget-coin-value { font-size: 0.875rem; }
+
+  .activity-title { font-size: 0.9375rem; }
+  .activity-desc { font-size: 0.8125rem; }
+  .activity-location { font-size: 0.75rem; }
+
+  .sidebar-title { font-size: 1.0625rem; }
+}
