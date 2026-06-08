@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Travel Hub — Documentație Tehnică</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css">
+<style>
+  @import url('https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css');
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,400;0,700;1,300&display=swap');
+
+  :root {
+    --accent:  #60a5fa;
+    --accent2: #c4b5fd;
+    --accent3: #6ee7b7;
+    --accent4: #fbbf24;
+    --border:  rgba(255,255,255,0.10);
+    --border-strong: rgba(255,255,255,0.16);
+
+    --bg-page:    #0a0a0f;
+    --bg-surface: #111118;
+    --bg-card:    #161620;
+    --bg-hover:   #1e1e2a;
+
+    --text-primary:   #f0f0f5;
+    --text-secondary: #8888a0;
+    --text-muted:     #55556a;
+
+    --font-heading: 'Fraunces', serif;
+    --font-mono:    'DM Mono', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-sans, sans-serif);
+    background: var(--bg-page);
+    color: var(--text-primary);
+    line-height: 1.7;
+  }
+
+  .readme-root {
+    max-width: 680px;
+    padding: 0 0 2rem;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    padding: 2.5rem 1.5rem 2rem;
+    border-bottom: 0.5px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    background: rgba(96,165,250,0.14);
+    color: #60a5fa;
+    border: 0.5px solid rgba(96,165,250,0.35);
+    border-radius: 99px;
+    padding: 3px 10px;
+    margin-bottom: 1rem;
+  }
+  .hero-badge i { font-size: 11px; }
+  .hero-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 2.2rem;
+    line-height: 1.15;
+    letter-spacing: -.02em;
+    color: var(--text-primary);
+    margin-bottom: .5rem;
+  }
+  .hero-title span {
+    background: linear-gradient(135deg, #60a5fa, #c4b5fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    font-size: 15px;
+    color: var(--text-secondary);
+    max-width: 520px;
+    margin-bottom: 1.25rem;
+  }
+
+  /* ── BADGES ── */
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 1.5rem;
+  }
+  .badge {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 0.5px solid var(--border-strong);
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    white-space: nowrap;
+  }
+  .badge.blue   { border-color:rgba(96,165,250,.35);  color:#60a5fa;  background:rgba(96,165,250,.10); }
+  .badge.green  { border-color:rgba(110,231,183,.35); color:#6ee7b7;  background:rgba(110,231,183,.10); }
+  .badge.amber  { border-color:rgba(251,191,36,.35);  color:#fbbf24;  background:rgba(251,191,36,.10); }
+  .badge.purple { border-color:rgba(196,181,253,.35); color:#c4b5fd;  background:rgba(196,181,253,.10); }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--bg-surface);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin: 1.5rem 1.5rem 0;
+  }
+  .toc-title {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: .75rem;
+  }
+  .toc-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .toc-list li { display: flex; align-items: center; gap: 8px; }
+  .toc-num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-muted);
+    min-width: 18px;
+  }
+  .toc-list a {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    transition: color .15s;
+  }
+  .toc-list a:hover { color: var(--accent); }
+
+  /* ── SECTION ── */
+  .section { padding: 2rem 1.5rem 0; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.25rem;
+    padding-bottom: .75rem;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .section-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 20px;
+  }
+  .section-title {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: -.01em;
+    color: var(--text-primary);
+  }
+  .section-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 1.25rem;
+    line-height: 1.6;
+  }
+
+  /* ── COMPONENT GRID ── */
+  .component-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 1.25rem;
+  }
+  .comp-card {
+    background: var(--bg-card);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: .75rem;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .comp-card:hover { border-color: var(--accent); background: var(--bg-hover); }
+  .comp-icon { font-size: 18px; margin-bottom: .4rem; display: block; color: var(--accent); }
+  .comp-name { font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 2px; }
+  .comp-tech { font-size: 10px; font-family: var(--font-mono); color: var(--text-muted); }
+
+  /* ── DIAGRAM CONTAINER ── */
+  .diagram-container {
+    background: var(--bg-surface);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+  }
+  .diagram-label {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: .5rem .75rem;
+    border-bottom: 0.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-card);
+  }
+  .diagram-label i { font-size: 12px; }
+
+  /* ── SVG color overrides for dark ── */
+  .c-blue  rect, .c-blue  circle { fill:#1e3a5f; stroke:#3b82f6; }
+  .c-blue  text { fill:#93c5fd !important; }
+  .c-teal  rect, .c-teal  circle { fill:#0d3330; stroke:#2dd4bf; }
+  .c-teal  text { fill:#5eead4 !important; }
+  .c-purple rect,.c-purple circle { fill:#2e1a4a; stroke:#a78bfa; }
+  .c-purple text { fill:#c4b5fd !important; }
+  .c-gray  rect, .c-gray  circle { fill:#1a1a22; stroke:#444455; }
+  .c-gray  text { fill:#8888a0 !important; }
+  .c-amber rect, .c-amber circle { fill:#2d1f00; stroke:#d97706; }
+  .c-amber text { fill:#fbbf24 !important; }
+  .arr { stroke: #444455; }
+  .ts, .th, .t { fill: #8888a0; }
+
+  /* ── TABLE ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    margin-bottom: 1.25rem;
+  }
+  .data-table thead tr { background: var(--bg-card); }
+  .data-table th {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--text-muted);
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 0.5px solid var(--border);
+    font-weight: 400;
+  }
+  .data-table td {
+    padding: 7px 10px;
+    border-bottom: 0.5px solid var(--border);
+    color: var(--text-primary);
+    vertical-align: top;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table td:first-child { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+  .data-table tr:hover td { background: var(--bg-card); }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-strong);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--accent3);
+  }
+
+  /* ── FLOW STEPS ── */
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 1.25rem;
+    position: relative;
+  }
+  .flow-step { display: flex; gap: 12px; align-items: flex-start; }
+  .flow-step-line { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+  .flow-dot {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-family: var(--font-mono); font-weight: 500;
+    flex-shrink: 0;
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-strong);
+    color: var(--text-muted);
+    z-index: 1;
+  }
+  .flow-dot.active {
+    background: rgba(96,165,250,.15);
+    border-color: rgba(96,165,250,.5);
+    color: #60a5fa;
+  }
+  .flow-connector { width: 0.5px; flex: 1; min-height: 14px; background: var(--border-strong); }
+  .flow-body { padding: 4px 0 16px; flex: 1; }
+  .flow-label { font-size: 13px; font-weight: 500; color: var(--text-primary); margin-bottom: 2px; }
+  .flow-sub { font-size: 12px; color: var(--text-secondary); }
+
+  /* ── AGENT CARDS ── */
+  .agent-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 1.25rem;
+  }
+  .agent-card {
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: .85rem;
+    background: var(--bg-card);
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .agent-card:hover { border-color: var(--border-strong); }
+  .agent-icon { font-size: 20px; margin-bottom: .4rem; display: block; }
+  .agent-name { font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: .25rem; }
+  .agent-role { font-size: 11px; color: var(--text-secondary); margin-bottom: .5rem; line-height: 1.4; }
+  .agent-pill {
+    display: inline-block;
+    font-size: 9px; font-family: var(--font-mono);
+    padding: 1px 6px; border-radius: 99px;
+    border: 0.5px solid var(--border-strong);
+    color: var(--text-muted);
+    margin-right: 3px; margin-bottom: 3px;
+    background: var(--bg-surface);
+  }
+
+  /* ── CICD PIPELINE ── */
+  .pipeline-row {
+    display: flex; align-items: stretch; gap: 0;
+    margin-bottom: 1.25rem;
+    border: 0.5px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+  }
+  .pipeline-stage {
+    flex: 1;
+    padding: .85rem .75rem;
+    border-right: 0.5px solid var(--border);
+    background: var(--bg-card);
+  }
+  .pipeline-stage:last-child { border-right: none; }
+  .pipeline-stage-name {
+    font-size: 10px; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: .06em;
+    color: var(--text-muted); margin-bottom: .5rem;
+  }
+  .pipeline-item {
+    font-size: 11px; color: var(--text-primary);
+    display: flex; align-items: flex-start; gap: 5px; margin-bottom: 3px;
+  }
+  .pipeline-item i { font-size: 12px; color: var(--accent3); margin-top: 1px; flex-shrink: 0; }
+
+  /* ── SECRET ROW ── */
+  .secret-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 0; border-bottom: 0.5px solid var(--border);
+  }
+  .secret-row:last-child { border-bottom: none; }
+  .secret-key { font-family: var(--font-mono); font-size: 11px; color: var(--accent); min-width: 155px; flex-shrink: 0; }
+  .secret-desc { font-size: 12px; color: var(--text-secondary); }
+
+  /* ── SUMMARY ── */
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+  .summary-card {
+    background: var(--bg-card);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: .85rem;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .summary-card i { font-size: 18px; color: var(--accent); margin-top: 1px; }
+  .summary-card-title { font-size: 12px; font-weight: 500; color: var(--text-primary); margin-bottom: 2px; }
+  .summary-card-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
+
+  /* ── APPS GRID CELLS ── */
+  .apps-cell {
+    padding: .85rem 1rem;
+    border-right: 0.5px solid var(--border);
+    border-bottom: 0.5px solid var(--border);
+  }
+  .apps-cell:nth-child(2) { border-right: none; }
+  .apps-cell:nth-child(3) { border-right: 0.5px solid var(--border); border-bottom: none; }
+  .apps-cell:nth-child(4) { border-right: none; border-bottom: none; }
+  .apps-cell-label {
+    font-size: 10px; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: .06em;
+    color: var(--text-muted); margin-bottom: .5rem;
+  }
+  .apps-cell-value { font-size: 12px; color: var(--text-primary); }
+
+  /* ── DOCKER STACK CELLS ── */
+  .docker-cell {
+    padding: .85rem 1rem;
+    border-right: 0.5px solid var(--border);
+  }
+  .docker-cell:last-child { border-right: none; }
+  .docker-cell-label {
+    font-size: 10px; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: .06em;
+    color: var(--text-muted); margin-bottom: .5rem;
+  }
+  .docker-cell-value { font-size: 12px; color: var(--text-primary); }
+
+  /* ── DIVIDER ── */
+  .divider { height: 0.5px; background: var(--border); margin: 0 1.5rem; }
+</style>
+</head>
+<body>
+<div class="readme-root">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-badge"><i class="ti ti-plane" aria-hidden="true"></i> Documentație Tehnică</div>
+    <h1 class="hero-title">AI Travel <span>Hub</span></h1>
+    <p class="hero-sub">Platformă colaborativă de planificare a călătoriilor cu agenți AI integrați — generare itinerariu, asistență în timp real și moderare automată a chat-ului.</p>
+    <div class="badge-row">
+      <span class="badge blue">Django 5.1</span>
+      <span class="badge blue">Gunicorn</span>
+      <span class="badge green">PostgreSQL 15</span>
+      <span class="badge green">Redis 7</span>
+      <span class="badge amber">Celery 5.4</span>
+      <span class="badge amber">OpenAI SDK</span>
+      <span class="badge purple">Gemini / Llama 3.1</span>
+      <span class="badge purple">Groq API</span>
+      <span class="badge">Nginx</span>
+      <span class="badge">Docker Compose</span>
+      <span class="badge">GitHub Actions</span>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">Cuprins</div>
+    <ul class="toc-list">
+      <li><span class="toc-num">01</span><a href="#arch">Arhitectura Componentelor</a></li>
+      <li><span class="toc-num">02</span><a href="#erd">Schema Bazei de Date (ERD)</a></li>
+      <li><span class="toc-num">03</span><a href="#ai">Interacțiunea Agenților AI (UML)</a></li>
+      <li><span class="toc-num">04</span><a href="#cicd">Workflow CI/CD</a></li>
+    </ul>
+  </div>
+
+  <!-- ── SECTION 1: ARHITECTURA ── -->
+  <div class="section" id="arch">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2 class="section-title">Arhitectura Componentelor</h2>
+    </div>
+    <p class="section-desc">Structura high-level a sistemului — trei niveluri principale: client, reverse proxy și backend Django, împreună cu serviciile auxiliare (PostgreSQL, Redis, API-uri externe).</p>
+
+    <div class="component-grid">
+      <div class="comp-card" onclick="sendPrompt('Explică rolul Nginx în arhitectura AI Travel Hub')">
+        <span class="comp-icon"><i class="ti ti-server-2" aria-hidden="true"></i></span>
+        <div class="comp-name">Nginx</div>
+        <div class="comp-tech">nginx:alpine</div>
+      </div>
+      <div class="comp-card" onclick="sendPrompt('Cum funcționează Django backend în AI Travel Hub?')">
+        <span class="comp-icon"><i class="ti ti-brand-python" aria-hidden="true"></i></span>
+        <div class="comp-name">Django Backend</div>
+        <div class="comp-tech">Django 5.1 + Gunicorn</div>
+      </div>
+      <div class="comp-card" onclick="sendPrompt('Ce date stochează PostgreSQL în AI Travel Hub?')">
+        <span class="comp-icon"><i class="ti ti-database" aria-hidden="true"></i></span>
+        <div class="comp-name">PostgreSQL</div>
+        <div class="comp-tech">PostgreSQL 15</div>
+      </div>
+      <div class="comp-card" onclick="sendPrompt('Cum este folosit Redis în AI Travel Hub?')">
+        <span class="comp-icon"><i class="ti ti-topology-star" aria-hidden="true"></i></span>
+        <div class="comp-name">Redis</div>
+        <div class="comp-tech">Redis 7 Alpine</div>
+      </div>
+      <div class="comp-card" onclick="sendPrompt('Ce task-uri asincrone rulează Celery în AI Travel Hub?')">
+        <span class="comp-icon"><i class="ti ti-refresh" aria-hidden="true"></i></span>
+        <div class="comp-name">Celery</div>
+        <div class="comp-tech">Celery 5.4</div>
+      </div>
+      <div class="comp-card" onclick="sendPrompt('Cum funcționează AI Agents în AI Travel Hub?')">
+        <span class="comp-icon"><i class="ti ti-robot" aria-hidden="true"></i></span>
+        <div class="comp-name">AI Agents</div>
+        <div class="comp-tech">OpenAI SDK</div>
+      </div>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-label"><i class="ti ti-sitemap" aria-hidden="true"></i> Flux request end-to-end</div>
+      <div style="padding:1rem 1.25rem;">
+        <svg width="100%" viewBox="0 0 620 88" role="img">
+          <title>Flux request end-to-end</title>
+          <desc>Fluxul unui request de la browser prin Nginx la Django Backend și serviciile externe</desc>
+          <defs>
+            <marker id="arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M2 1L8 5L2 9" fill="none" stroke="#60a5fa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </marker>
+          </defs>
+          <g class="c-blue">
+            <rect x="10" y="22" width="100" height="44" rx="8" stroke-width="0.5"/>
+            <text class="th" x="60" y="40" text-anchor="middle" dominant-baseline="central" style="font-size:12px;fill:#93c5fd">Browser</text>
+            <text class="ts" x="60" y="58" text-anchor="middle" dominant-baseline="central" style="fill:#93c5fd;font-size:10px">SPA + Service Worker</text>
+          </g>
+          <line x1="112" y1="44" x2="148" y2="44" stroke="#444455" stroke-width="1" marker-end="url(#arr1)"/>
+          <text x="130" y="36" text-anchor="middle" style="font-size:10px;fill:#55556a">HTTPS</text>
+
+          <g class="c-teal">
+            <rect x="150" y="22" width="100" height="44" rx="8" stroke-width="0.5"/>
+            <text class="th" x="200" y="40" text-anchor="middle" dominant-baseline="central" style="font-size:12px;fill:#5eead4">Nginx</text>
+            <text class="ts" x="200" y="58" text-anchor="middle" dominant-baseline="central" style="fill:#5eead4;font-size:10px">Proxy + Static</text>
+          </g>
+          <line x1="252" y1="44" x2="288" y2="44" stroke="#444455" stroke-width="1" marker-end="url(#arr1)"/>
+          <text x="270" y="36" text-anchor="middle" style="font-size:10px;fill:#55556a">:8000</text>
+
+          <g class="c-purple">
+            <rect x="290" y="10" width="120" height="68" rx="8" stroke-width="0.5"/>
+            <text class="th" x="350" y="35" text-anchor="middle" dominant-baseline="central" style="font-size:12px;fill:#c4b5fd">Django</text>
+            <text x="350" y="52" text-anchor="middle" dominant-baseline="central" style="font-size:10px;fill:#c4b5fd">Auth · Apps · AI</text>
+            <text x="350" y="68" text-anchor="middle" dominant-baseline="central" style="font-size:10px;fill:#c4b5fd">Finance · Notif</text>
+          </g>
+          <line x1="412" y1="30" x2="448" y2="20" stroke="#444455" stroke-width="1" marker-end="url(#arr1)"/>
+          <line x1="412" y1="44" x2="448" y2="44" stroke="#444455" stroke-width="1" marker-end="url(#arr1)"/>
+          <line x1="412" y1="58" x2="448" y2="68" stroke="#444455" stroke-width="1" marker-end="url(#arr1)"/>
+
+          <g class="c-gray">
+            <rect x="450" y="8" width="88" height="26" rx="6" stroke-width="0.5"/>
+            <text x="494" y="21" text-anchor="middle" dominant-baseline="central" style="font-size:10px;fill:#8888a0">PostgreSQL</text>
+          </g>
+          <g class="c-gray">
+            <rect x="450" y="31" width="88" height="26" rx="6" stroke-width="0.5"/>
+            <text x="494" y="44" text-anchor="middle" dominant-baseline="central" style="font-size:10px;fill:#8888a0">Redis + Celery</text>
+          </g>
+          <g class="c-amber">
+            <rect x="450" y="54" width="88" height="26" rx="6" stroke-width="0.5"/>
+            <text x="494" y="67" text-anchor="middle" dominant-baseline="central" style="font-size:10px;fill:#fbbf24">LLM / Groq APIs</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-label"><i class="ti ti-layout-grid" aria-hidden="true"></i> Aplicații Django</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;">
+        <div class="apps-cell">
+          <div class="apps-cell-label">Accounts</div>
+          <div class="apps-cell-value">JWT Auth, Google OAuth, UserProfile</div>
+        </div>
+        <div class="apps-cell" style="border-right:none">
+          <div class="apps-cell-label">Core</div>
+          <div class="apps-cell-value">Groups, Trips, Chat, Checklists</div>
+        </div>
+        <div class="apps-cell" style="border-bottom:none">
+          <div class="apps-cell-label">Finance</div>
+          <div class="apps-cell-value">Transactions, Debt Simplifier, Currency Converter (Frankfurter, cache 6h)</div>
+        </div>
+        <div class="apps-cell" style="border-right:none;border-bottom:none">
+          <div class="apps-cell-label">AI Agents</div>
+          <div class="apps-cell-value">Pathfinder, Concierge (SSE), Moderator — rate limit 3/min, 10/h</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 2: ERD ── -->
+  <div class="section" id="erd">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2 class="section-title">Schema Bazei de Date (ERD)</h2>
+    </div>
+    <p class="section-desc">10 tabele PostgreSQL cu relații FK și constrângeri de unicitate. Entitatea centrală este <code>auth_user</code>, de la care pornesc toate relațiile.</p>
+
+    <div class="diagram-container">
+      <div class="diagram-label"><i class="ti ti-table" aria-hidden="true"></i> Tabele principale</div>
+      <table class="data-table" style="margin:0">
+        <thead>
+          <tr>
+            <th>Tabel</th>
+            <th>Câmpuri cheie</th>
+            <th>Relații</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>auth_user</td><td>id, username, email, password</td><td>Entitate centrală</td></tr>
+          <tr><td>UserProfile</td><td>user_id (1:1), preferred_currency, push_token</td><td>→ auth_user</td></tr>
+          <tr><td>Group</td><td>invite_code (unique 8c), created_by_id</td><td>→ auth_user</td></tr>
+          <tr><td>GroupMembership</td><td>role (admin|member), unique(user,group)</td><td>→ auth_user, Group</td></tr>
+          <tr><td>Trip</td><td>destination, start/end_date, budget, currency</td><td>→ Group</td></tr>
+          <tr><td>ItineraryItem</td><td>day, order, title, location, start_time</td><td>→ Trip</td></tr>
+          <tr><td>Message</td><td>message_type (text|system|ai), content</td><td>→ Group, auth_user</td></tr>
+          <tr><td>ChecklistItem</td><td>is_completed, completed_by_id, order</td><td>→ Trip, auth_user</td></tr>
+          <tr><td>Transaction</td><td>amount, split_type (equal|custom), receipt_url</td><td>→ Trip, auth_user</td></tr>
+          <tr><td>DebtSplit</td><td>status (pending|paid), paid_at, unique(tx,debtor)</td><td>→ Transaction, auth_user</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-label"><i class="ti ti-lock" aria-hidden="true"></i> Constrângeri de unicitate</div>
+      <div style="padding:.75rem 1rem;">
+        <div class="secret-row">
+          <span class="secret-key">GroupMembership</span>
+          <span class="secret-desc"><code>unique_together</code>: <code>(user_id, group_id)</code></span>
+        </div>
+        <div class="secret-row">
+          <span class="secret-key">DebtSplit</span>
+          <span class="secret-desc"><code>unique_together</code>: <code>(transaction_id, debtor_id)</code></span>
+        </div>
+        <div class="secret-row">
+          <span class="secret-key">NotificationPreference</span>
+          <span class="secret-desc"><code>unique_together</code>: <code>(user_id, event_type)</code></span>
+        </div>
+        <div class="secret-row">
+          <span class="secret-key">Group</span>
+          <span class="secret-desc"><code>invite_code</code> — câmp unic, 8 caractere</span>
+        </div>
+        <div class="secret-row" style="border-bottom:none">
+          <span class="secret-key">UserProfile</span>
+          <span class="secret-desc"><code>user_id</code> — relație OneToOne cu <code>auth_user</code></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 3: AI AGENTS ── -->
+  <div class="section" id="ai">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2 class="section-title">Interacțiunea Agenților AI</h2>
+    </div>
+    <p class="section-desc">Trei agenți specializați cu roluri distincte, toți protejați de un rate limiter global (3 req/min, 10 req/oră per utilizator).</p>
+
+    <div class="agent-cards">
+      <div class="agent-card" onclick="sendPrompt('Explică detaliat cum funcționează agentul Pathfinder în AI Travel Hub')">
+        <span class="agent-icon"><i class="ti ti-map-route" style="color:#60a5fa" aria-hidden="true"></i></span>
+        <div class="agent-name">Pathfinder</div>
+        <div class="agent-role">Generează itinerariu complet din preferințele utilizatorului, cu 4 strategii de JSON parsing robust.</div>
+        <span class="agent-pill">Gemini / Ollama</span>
+        <span class="agent-pill">Atomic DB tx</span>
+      </div>
+      <div class="agent-card" onclick="sendPrompt('Cum funcționează SSE streaming în agentul Concierge?')">
+        <span class="agent-icon"><i class="ti ti-message-chatbot" style="color:#c4b5fd" aria-hidden="true"></i></span>
+        <div class="agent-name">Concierge</div>
+        <div class="agent-role">Asistență în timp real cu SSE streaming token-by-token. Poate sugera modificări de itinerariu.</div>
+        <span class="agent-pill">SSE stream</span>
+        <span class="agent-pill">Async</span>
+      </div>
+      <div class="agent-card" onclick="sendPrompt('Explică politica fail-open a agentului Moderator')">
+        <span class="agent-icon"><i class="ti ti-shield-check" style="color:#6ee7b7" aria-hidden="true"></i></span>
+        <div class="agent-name">Moderator</div>
+        <div class="agent-role">Moderare automată a mesajelor de chat. Politică fail-open: la orice eroare, mesajul este permis.</div>
+        <span class="agent-pill">Groq API</span>
+        <span class="agent-pill">temp=0</span>
+      </div>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-label"><i class="ti ti-map-route" aria-hidden="true"></i> 3.1 Pathfinder — Generare Itinerariu (US-005)</div>
+      <div style="padding:1rem 1.25rem">
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">1</div><div class="flow-connector"></div></div>
+            <div class="flow-body"><div class="flow-label">POST /api/ai/generate-itinerary/</div><div class="flow-sub">Frontend trimite <code>trip_id</code> și preferințele utilizatorului.</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">2</div><div class="flow-connector"></div></div>
+            <div class="flow-body"><div class="flow-label">Rate Limit check</div><div class="flow-sub">Verificare contor per utilizator. La depășire → <code>429 Too Many Requests</code> cu <code>retry_after</code>.</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">3</div><div class="flow-connector"></div></div>
+            <div class="flow-body"><div class="flow-label">Fetch Trip din DB</div><div class="flow-sub">Extrage destinație, durată, buget și monedă din PostgreSQL.</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">4</div><div class="flow-connector"></div></div>
+            <div class="flow-body"><div class="flow-label">LLM call → parse JSON</div><div class="flow-sub">Pathfinder Agent apelează LLM și parsează răspunsul cu 4 strategii de fallback.</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">5</div><div class="flow-connector" style="min-height:0"></div></div>
+            <div class="flow-body"><div class="flow-label">Tranzacție atomică DB</div><div class="flow-sub">DELETE itinerariu vechi → CREATE <code>ItineraryItem × N</code> → CREATE <code>Message</code> (type=ai).</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-label"><i class="ti ti-message-chatbot" aria-hidden="true"></i> 3.2 Concierge — SSE Streaming (US-013)</div>
+      <div style="padding:1rem 1.25rem">
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">1</div><div class="flow-connector"></div></div>
+            <div class="flow-body"><div class="flow-label">POST /api/ai/concierge/</div><div class="flow-sub">Frontend trimite întrebarea utilizatorului și <code>trip_id</code>.</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">2</div><div class="flow-connector"></div></div>
+            <div class="flow-body"><div class="flow-label">Build context</div><div class="flow-sub">Agent construiește contextul: informații trip, UTC time, mesaje recente.</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">3</div><div class="flow-connector"></div></div>
+            <div class="flow-body"><div class="flow-label">SSE stream token-by-token</div><div class="flow-sub">LLM returnează chunk-uri; fiecare token este trimis imediat ca <code>event: token</code> via <code>text/event-stream</code>.</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">4</div><div class="flow-connector" style="min-height:0"></div></div>
+            <div class="flow-body"><div class="flow-label">event: complete</div><div class="flow-sub">La final, dacă răspunsul conține <code>[ITINERARY_SUGGESTION]</code>, frontend afișează butonul "Adaugă la itinerariu".</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-label"><i class="ti ti-shield-check" aria-hidden="true"></i> 3.3 Moderator — Chat Moderation (Groq)</div>
+      <div style="padding:1rem 1.25rem">
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">1</div><div class="flow-connector"></div></div>
+            <div class="flow-body"><div class="flow-label">POST /api/chat/&lt;group_id&gt;/send/</div><div class="flow-sub">Mesajul ajunge la Chat View înainte de a fi persistat.</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">2</div><div class="flow-connector"></div></div>
+            <div class="flow-body"><div class="flow-label">Groq API call (temp=0)</div><div class="flow-sub">Dacă <code>GROQ_API_KEY</code> este configurat, se apelează Llama 3.1 8B Instant pentru clasificare.</div></div>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-line"><div class="flow-dot active">3</div><div class="flow-connector" style="min-height:0"></div></div>
+            <div class="flow-body"><div class="flow-label">Decizie allow / block</div><div class="flow-sub">Mesaj blocat → <code>403 Forbidden</code>. Mesaj permis → <code>Message.objects.create()</code>. Politică fail-open la orice excepție sau JSON invalid.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SECTION 4: CI/CD ── -->
+  <div class="section" id="cicd">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2 class="section-title">Workflow CI/CD</h2>
+    </div>
+    <p class="section-desc">Două pipeline-uri GitHub Actions separate: CI cu teste Playwright E2E și CD cu deploy SSH pe VPS prin Docker Compose.</p>
+
+    <div class="pipeline-row">
+      <div class="pipeline-stage">
+        <div class="pipeline-stage-name">Trigger</div>
+        <div class="pipeline-item"><i class="ti ti-git-branch" aria-hidden="true"></i> Push pe <code>main</code></div>
+        <div class="pipeline-item"><i class="ti ti-git-pull-request" aria-hidden="true"></i> Pull Request</div>
+        <div class="pipeline-item"><i class="ti ti-git-commit" aria-hidden="true"></i> Push pe <code>rebase</code></div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-stage-name">CI — E2E Tests</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> PostgreSQL service</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> Django migrate</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> Playwright install</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> 9 test suites</div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-stage-name">CD — Deploy VPS</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> SSH → VPS</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> git reset --hard</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> docker compose up</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> image prune</div>
+      </div>
+      <div class="pipeline-stage">
+        <div class="pipeline-stage-name">Docker Build</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> python:3.11-slim</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> makemigrations</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> collectstatic</div>
+        <div class="pipeline-item"><i class="ti ti-check" aria-hidden="true"></i> gunicorn :8000</div>
+      </div>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-label"><i class="ti ti-test-pipe" aria-hidden="true"></i> Suite Playwright E2E (Chromium + Firefox)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;padding:.75rem 1rem;">
+        <span class="badge">landing.spec.js</span>
+        <span class="badge">login.spec.js</span>
+        <span class="badge">dashboard.spec.js</span>
+        <span class="badge">itinerary.spec.js</span>
+        <span class="badge">expenses.spec.js</span>
+        <span class="badge">checklist.spec.js</span>
+        <span class="badge">ai_concierge.spec.js</span>
+        <span class="badge">group_actions.spec.js</span>
+        <span class="badge">trip_actions.spec.js</span>
+      </div>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-label"><i class="ti ti-key" aria-hidden="true"></i> Variabile de mediu și secrete CI/CD</div>
+      <div style="padding:.75rem 1rem;">
+        <div class="secret-row">
+          <span class="secret-key">VPS_HOST</span>
+          <span class="secret-desc">Adresa IP / hostname a serverului VPS — folosit la Deploy</span>
+        </div>
+        <div class="secret-row">
+          <span class="secret-key">VPS_USER</span>
+          <span class="secret-desc">Username SSH pentru conexiunea de deploy</span>
+        </div>
+        <div class="secret-row">
+          <span class="secret-key">VPS_PASSWORD</span>
+          <span class="secret-desc">Parolă SSH transmisă prin <code>sshpass</code></span>
+        </div>
+        <div class="secret-row">
+          <span class="secret-key">SECRET_KEY</span>
+          <span class="secret-desc">Django secret key (hardcodat pentru rularea E2E Tests)</span>
+        </div>
+        <div class="secret-row" style="border-bottom:none">
+          <span class="secret-key">DB_NAME / DB_USER / DB_PASSWORD</span>
+          <span class="secret-desc">Credențiale PostgreSQL pentru baza de date de test</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="diagram-container">
+      <div class="diagram-label"><i class="ti ti-brand-docker" aria-hidden="true"></i> Docker Compose stack (producție)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;">
+        <div class="docker-cell">
+          <div class="docker-cell-label">nginx:alpine</div>
+          <div class="docker-cell-value">Port 80:80 — proxy pass + fișiere statice (ro mount)</div>
+        </div>
+        <div class="docker-cell">
+          <div class="docker-cell-label">python:3.11-slim</div>
+          <div class="docker-cell-value">Gunicorn :8000 — 3 workers, 3 threads, volumes staticfiles + media</div>
+        </div>
+        <div class="docker-cell" style="border-right:none">
+          <div class="docker-cell-label">redis:7-alpine</div>
+          <div class="docker-cell-value">Message broker pentru Celery, volume persistent <code>redis_data</code></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SUMMARY ── -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">—</span>
+      <h2 class="section-title">Rezumat</h2>
+    </div>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <i class="ti ti-sitemap" aria-hidden="true"></i>
+        <div class="summary-card-body">
+          <div class="summary-card-title">Arhitectura componentelor</div>
+          <div class="summary-card-desc">Structura high-level: Client → Nginx → Django → DB + AI APIs</div>
+        </div>
+      </div>
+      <div class="summary-card">
+        <i class="ti ti-database" aria-hidden="true"></i>
+        <div class="summary-card-body">
+          <div class="summary-card-title">Schema BD (ERD)</div>
+          <div class="summary-card-desc">10 tabele PostgreSQL cu relații FK și constrângeri unique</div>
+        </div>
+      </div>
+      <div class="summary-card">
+        <i class="ti ti-robot" aria-hidden="true"></i>
+        <div class="summary-card-body">
+          <div class="summary-card-title">Agenți AI (UML)</div>
+          <div class="summary-card-desc">Pathfinder (generare), Concierge (SSE), Moderator (Groq)</div>
+        </div>
+      </div>
+      <div class="summary-card">
+        <i class="ti ti-git-branch" aria-hidden="true"></i>
+        <div class="summary-card-body">
+          <div class="summary-card-title">Workflow CI/CD</div>
+          <div class="summary-card-desc">Playwright E2E + Deploy SSH pe VPS cu Docker Compose</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
