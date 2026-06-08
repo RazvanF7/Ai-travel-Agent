@@ -520,6 +520,29 @@
   });
 
   // Chat
+  let lastMessageTimestamp = null;
+  let chatPollInterval = null;
+
+  function renderMessageHtml(msg) {
+    const isMe = msg.sender?.id === currentUserId;
+    const senderName = msg.sender ? (msg.sender.first_name || msg.sender.username) : 'System';
+    return `<div class="message ${isMe ? 'user' : 'assistant'}">
+      <div class="message-sender">${senderName}</div>
+      <div class="message-bubble">${msg.content}</div>
+    </div>`;
+  }
+
+  function updateChatSidebar(msg) {
+    const sidebarContainer = document.getElementById('sidebar-chat');
+    const isSystemMsg = !msg.sender;
+    sidebarContainer.innerHTML = `
+      <span style="font-size: 0.75rem; font-weight: 700; color: var(--accent-primary);">${isSystemMsg ? 'AI' : 'You'}</span> 
+      <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; color: var(--text-secondary);">
+        ${isSystemMsg ? 'AI: ' : 'You: '} ${msg.content}
+      </span>
+    `;
+  }
+
   async function loadChat() {
     try {
       const messages = await window.api.chat.history(groupId);
@@ -529,35 +552,75 @@
       if (messages.length === 0) {
         container.innerHTML = '<div style="color: var(--text-tertiary); text-align: center; margin-top: 20px;">No messages yet. Say hi!</div>';
         sidebarContainer.innerHTML = 'AI: Ask me anything!';
+        lastMessageTimestamp = null;
         return;
       }
 
       let html = '';
-      messages.forEach(msg => {
-        const isMe = msg.sender?.id === currentUserId;
-        const senderName = msg.sender ? (msg.sender.first_name || msg.sender.username) : 'System';
-        html += `<div class="message ${isMe ? 'user' : 'assistant'}">
-          <div class="message-sender">${senderName}</div>
-          <div class="message-bubble">${msg.content}</div>
-        </div>`;
-      });
+      messages.forEach(msg => { html += renderMessageHtml(msg); });
       container.innerHTML = `<div style="display: flex; flex-direction: column; gap: 8px;">${html}</div>`;
       container.scrollTop = container.scrollHeight;
 
       const lastMsg = messages[messages.length - 1];
-      const isSystemMsg = !lastMsg.sender;
-      sidebarContainer.innerHTML = `
-        <span style="font-size: 0.75rem; font-weight: 700; color: var(--accent-primary);">${isSystemMsg ? 'AI' : 'You'}</span> 
-        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; color: var(--text-secondary);">
-          ${isSystemMsg ? 'AI: ' : 'You: '} ${lastMsg.content}
-        </span>
-      `;
+      lastMessageTimestamp = lastMsg.created_at;
+      updateChatSidebar(lastMsg);
     } catch (e) {
       console.error(e);
       document.getElementById('chat-messages').innerHTML = '<span style="color: var(--accent-danger);">Error loading chat.</span>';
       document.getElementById('sidebar-chat').innerHTML = '<span style="color: var(--accent-danger);">Error loading chat.</span>';
     }
   }
+
+  async function pollChat() {
+    if (!lastMessageTimestamp) return;
+    try {
+      const newMessages = await window.api.chat.poll(groupId, lastMessageTimestamp);
+      if (newMessages.length === 0) return;
+
+      const container = document.getElementById('chat-messages');
+      let wrapper = container.querySelector('div');
+      if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+        container.innerHTML = '';
+        container.appendChild(wrapper);
+      }
+
+      newMessages.forEach(msg => {
+        wrapper.insertAdjacentHTML('beforeend', renderMessageHtml(msg));
+      });
+      container.scrollTop = container.scrollHeight;
+
+      const lastMsg = newMessages[newMessages.length - 1];
+      lastMessageTimestamp = lastMsg.created_at;
+      updateChatSidebar(lastMsg);
+    } catch (e) {
+      console.error('Chat poll error:', e);
+    }
+  }
+
+  // Start polling every 3 seconds
+  function startChatPolling() {
+    if (chatPollInterval) return;
+    chatPollInterval = setInterval(pollChat, 3000);
+  }
+
+  function stopChatPolling() {
+    if (chatPollInterval) {
+      clearInterval(chatPollInterval);
+      chatPollInterval = null;
+    }
+  }
+
+  // Pause polling when tab is hidden to save resources
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      stopChatPolling();
+    } else {
+      pollChat(); // Immediately fetch any missed messages
+      startChatPolling();
+    }
+  });
 
   document.getElementById('chat-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -567,8 +630,20 @@
 
     input.value = '';
     try {
-      await window.api.chat.send(groupId, content);
-      loadChat();
+      const sentMsg = await window.api.chat.send(groupId, content);
+      // Append sent message immediately for instant feedback
+      const container = document.getElementById('chat-messages');
+      let wrapper = container.querySelector('div');
+      if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display: flex; flex-direction: column; gap: 8px;';
+        container.innerHTML = '';
+        container.appendChild(wrapper);
+      }
+      wrapper.insertAdjacentHTML('beforeend', renderMessageHtml(sentMsg));
+      container.scrollTop = container.scrollHeight;
+      lastMessageTimestamp = sentMsg.created_at;
+      updateChatSidebar(sentMsg);
     } catch (e) {
       alert(e.message);
     }
@@ -648,6 +723,6 @@
   loadItineraryWithReviews();
   loadChecklists();
   loadExpenses();
-  loadChat();
+  loadChat().then(() => startChatPolling());
 </script>
 {% endblock %}
