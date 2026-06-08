@@ -139,3 +139,45 @@ Both agents share the following infrastructure:
 - **Rate limiting:** Both agents are governed by a unified rate limiter -- **3 requests per minute** and **10 requests per hour** per user. When a limit is exceeded, the client receives an error with a `retry_after` value in seconds
 - **Error handling:** All AI calls are wrapped in try/except blocks. On failure, a user-friendly error message is sent over the WebSocket instead of exposing internal details
 - **WebSocket consumer:** Both agents are handled by a single `AIStreamConsumer` class that routes requests based on the `action` field (`generate_itinerary` or `concierge`)
+
+## AI Tools Used in Development
+
+### About the Team
+
+AI Travel Agent was built by a team of five Computer Science students during their 4th semester as part of the Software Development Methods (MDS) course. With varying levels of experience across frontend, backend, and DevOps, the team relied heavily on AI-powered development tools to accelerate the process, bridge individual knowledge gaps, and maintain a consistent code quality standard across all modules.
+
+None of us had prior production experience combining Django Channels, WebSocket streaming, and AI API integration in a single project. AI tools were instrumental in helping the team navigate unfamiliar territory while keeping the codebase cohesive and well-structured.
+
+### Tools and How They Were Used
+
+**GitHub Copilot** was used by all team members as the primary code-completion assistant inside VS Code. It was especially useful for:
+- Writing repetitive boilerplate code (Django models, serializers, REST views)
+- Auto-completing WebSocket consumer handlers and channel layer message routing
+- Generating consistent patterns across similar modules (e.g., each app follows the same model-serializer-view-url structure, and Copilot helped maintain that uniformity once the first module was written)
+- Writing CSS rules and React component markup faster by predicting layout patterns from context
+
+**ChatGPT (GPT-4)** served as the team's on-demand technical consultant. It was used for:
+- Architectural decisions early in the project (choosing between Django REST Framework vs. FastAPI, deciding on JWT over session-based auth, structuring the WebSocket layer)
+- Debugging complex issues such as ASGI/WSGI configuration conflicts when running Daphne alongside Django, and resolving CORS problems between the Vite dev server and the Django backend
+- Understanding and implementing the debt simplification algorithm -- the greedy creditor-debtor matching approach was designed collaboratively with ChatGPT, starting from a description of the Splitwise-style problem
+- Writing and refining the system prompts for both AI agents (Pathfinder and Concierge), iterating on prompt engineering to get structured JSON output from the LLM reliably
+- Drafting documentation, including portions of this README
+
+**Claude** was used selectively for:
+- Reviewing larger code sections and getting architectural feedback on the Django project structure
+- Generating and refining documentation content
+- Analyzing the full codebase to produce accurate, detailed descriptions of project features
+
+**Gemini** was occasionally used for:
+- Quick research on library APIs and configuration options (e.g., `pywebpush` VAPID setup, `django-allauth` social login configuration)
+- Comparing alternative approaches for specific implementation details
+
+### Our Policy on AI Usage
+
+The team treated AI tools as accelerators, not replacements for understanding. Every AI-generated code suggestion was reviewed, tested, and adapted before being merged. In several cases, AI output served as a starting point that was then significantly modified to fit the project's specific requirements.
+
+Key principles we followed:
+- **No blind copy-paste.** Every suggestion was reviewed for correctness and adapted to the project's conventions.
+- **AI for learning, not bypassing.** When an AI tool introduced an unfamiliar concept (e.g., Django Channels consumer lifecycle, async generators for streaming), team members took the time to understand the underlying mechanism before using it.
+- **Human-driven architecture.** All high-level design decisions (database schema, module boundaries, API contracts, WebSocket message protocols) were made by the team. AI tools helped implement those decisions, not make them.
+
