@@ -68,13 +68,8 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      # 3. Start the Django application so Playwright can navigate to it
-      - name: Start Django Server
-        run: |
-          python backend/manage.py runserver 0.0.0.0:8000 &
-          sleep 5  # Give the server a few seconds to boot up before testing
 
-      # 4. Run the automated browser tests
+      # 3. Run the automated browser tests
       - name: Run Playwright tests
         run: npx playwright test
 
