@@ -8,6 +8,10 @@ Built as a full-stack application with a **Django REST** backend and a **React (
 
 Real-time collaboration is at the core of the platform. Using **Django Channels** and WebSocket connections, group members can chat, update shared checklists, and receive AI-generated content simultaneously — all with live synchronization and presence tracking.
 
+## Live Demo
+
+[FUN LITTLE DEMO FOR YOU](https://youtu.be/E3LgWTgIFA4)
+
 ## Main Functionalities
 
 ### 1. Authentication & User Management
