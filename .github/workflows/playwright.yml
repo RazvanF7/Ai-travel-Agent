@@ -11,14 +11,14 @@ jobs:
     timeout-minutes: 15
     runs-on: ubuntu-latest
 
-    # Setup PostgreSQL container service for E2E database
+    # 1. Spin up an ephemeral, throwaway PostgreSQL container purely for testing
     services:
       postgres:
         image: postgres:15
         env:
           POSTGRES_DB: travel_db
           POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_password
+          POSTGRES_PASSWORD: test_pass
         ports:
           - 5432:5432
         options: >-
@@ -27,10 +27,11 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    # 2. Tell Django to connect to the throwaway container, overriding your .env
     env:
       DB_NAME: travel_db
       DB_USER: test_user
-      DB_PASSWORD: test_password
+      DB_PASSWORD: test_pass
       DB_HOST: localhost
       DB_PORT: 5432
       SECRET_KEY: ci-secret-key-placeholder-for-playwright-e2e-testing
@@ -51,7 +52,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Run Django Migrations
+      - name: Run Django Migrations (creates tables in the throwaway DB)
         run: |
           python backend/manage.py migrate
 
@@ -67,6 +68,13 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
+      # 3. Start the Django application so Playwright can navigate to it
+      - name: Start Django Server
+        run: |
+          python backend/manage.py runserver 0.0.0.0:8000 &
+          sleep 5  # Give the server a few seconds to boot up before testing
+
+      # 4. Run the automated browser tests
       - name: Run Playwright tests
         run: npx playwright test
 
