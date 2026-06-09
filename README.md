@@ -8,10 +8,10 @@ AI Travel Hub is a collaborative trip-planning platform powered by AI agents. It
 
 ## Table of Contents
 
-- [Project Description](#project-description)
 - [Main Functionalities](#main-functionalities)
 - [Live Demo](#live-demo)
 - [Tech Stack](#tech-stack)
+- [AI Agents](#ai-agents)
 - [Automated Tests](#automated-tests)
 - [CI/CD](#cicd)
 
@@ -102,6 +102,124 @@ AI Travel Hub is a collaborative trip-planning platform powered by AI agents. It
 | **E2E Testing** | Playwright (Chromium + Firefox) |
 | **CI/CD** | GitHub Actions |
 | **Deployment** | VPS via SSH (Docker Compose) |
+
+---
+
+## AI Agents
+
+The platform's intelligence is driven by three specialized AI agents, each with a focused responsibility. All agents communicate through an OpenAI-compatible API and are located in the `backend/ai_agents/` module.
+
+### Architecture Overview
+
+```
+User Request
+     |
+     v
+ [Rate Limiter]  ──  3 req/min, 10 req/hour per user
+     |
+     ├──> Pathfinder Agent    (itinerary generation)
+     ├──> Concierge Agent     (in-trip assistance)
+     └──> Moderator Agent     (chat moderation)
+           |
+           v
+   LLM Backend (OpenAI-compatible API)
+```
+
+All AI endpoints are JWT-protected and rate-limited. The rate limiter enforces **3 requests per minute** and **10 requests per hour** per user, returning a `429` response with a `retry_after` value when exceeded.
+
+### Pathfinder -- Itinerary Generation
+
+**Purpose:** Generates complete day-by-day travel itineraries from a text prompt.
+
+**How it works:**
+1. Receives destination, trip duration, budget, currency, and user preferences.
+2. Sends a structured system prompt instructing the LLM to return a JSON array of activities.
+3. Parses the LLM response with a multi-layered JSON extraction strategy:
+   - Fenced code block extraction (` ```json ... ``` `)
+   - Raw JSON array detection by bracket indexing
+   - JSON object with nested `activities` key
+   - Individual object fallback (extracts `{...}` blocks one by one)
+4. Validates and cleans each activity field (day, order, start_time format, duration).
+5. Saves activities to the database inside a transaction, replacing any previous itinerary.
+6. Posts a system message in the group chat announcing the new itinerary.
+
+**Activity schema returned by the LLM:**
+```json
+{
+  "day": 1,
+  "order": 0,
+  "title": "Arrival & Check-in",
+  "description": "Check into hotel and freshen up",
+  "location": "Hotel Grand, City Center",
+  "start_time": "14:00",
+  "duration_minutes": 60
+}
+```
+
+**API endpoint:** `POST /api/ai/generate-itinerary/`
+
+**Supports both:** synchronous JSON response and async SSE streaming.
+
+### Concierge -- In-Trip Assistance
+
+**Purpose:** Real-time travel chatbot that provides local recommendations, emergency contacts, and travel tips during a trip.
+
+**How it works:**
+1. Builds a context string from the current trip (destination, dates, budget) and the last 5 messages of conversation history.
+2. Injects the current UTC timestamp so the LLM can give time-aware suggestions.
+3. Streams the response token-by-token via Server-Sent Events (SSE).
+4. Detects structured `[ITINERARY_SUGGESTION]` blocks in the response, allowing users to import suggested activities directly into their itinerary.
+
+**System prompt rules:**
+- Only answers travel-related questions; redirects off-topic queries.
+- Prioritizes actionable information (addresses, phone numbers, hours).
+- Provides local emergency numbers first in emergency situations.
+- Formats itinerary suggestions with title, location, time, duration, and description.
+
+**API endpoint:** `POST /api/ai/concierge/` (returns `text/event-stream`)
+
+**SSE event types:**
+| Event | Payload |
+|---|---|
+| `token` | `{"type": "token", "content": "..."}` |
+| `complete` | `{"type": "complete", "full_text": "...", "has_suggestion": bool}` |
+| `error` | `{"type": "error", "message": "..."}` |
+
+### Moderator -- Chat Moderation
+
+**Purpose:** Screens group chat messages for inappropriate content before they are saved to the database.
+
+**How it works:**
+1. Intercepts each message before persistence.
+2. Sends the message content (with sender name) to the LLM with a moderation-focused system prompt.
+3. The LLM responds with a JSON verdict: `{"allowed": true}` or `{"allowed": false, "reason": "..."}`.
+4. Blocked messages are rejected with the reason; allowed messages proceed to storage.
+
+**Moderation policy:**
+- **Blocks:** hate speech, slurs, harassment, threats, explicit content, spam, phishing, doxxing.
+- **Allows:** travel discussion, friendly conversation, jokes/banter, debates, off-topic casual chat.
+- **Fail-open design:** if the moderation API is unavailable, misconfigured, or returns an unparseable response, the message is allowed through. This ensures the chat never breaks due to AI failures.
+
+**Uses a separate LLM configuration** (Groq) from the Pathfinder/Concierge agents, with `temperature: 0` and `max_tokens: 100` for deterministic, fast moderation.
+
+### Rate Limiter
+
+All AI endpoints share a token-bucket rate limiter (`rate_limiter.py`):
+
+| Limit | Window | Threshold |
+|---|---|---|
+| Per-minute | 60 seconds | 3 requests |
+| Per-hour | 3600 seconds | 10 requests |
+
+When a limit is exceeded, the API returns:
+```json
+{
+  "error": "Rate limit exceeded. Try again in 42 seconds.",
+  "retry_after": 42
+}
+```
+
+**Status check endpoint:** `GET /api/ai/status/` -- returns current rate limit state for the authenticated user.
 
 ---
 
