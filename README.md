@@ -14,6 +14,7 @@ AI Travel Hub is a collaborative trip-planning platform powered by AI agents. It
 - [AI Agents](#ai-agents)
 - [Automated Tests](#automated-tests)
 - [CI/CD](#cicd)
+- [AI Development Report](#ai-development-report)
 
 ---
 
@@ -356,3 +357,21 @@ GitHub (push to rebase)
     ├── redis      (Redis 7 Alpine)
     └── nginx      (Nginx Alpine, port 80)
 ```
+
+---
+
+## AI Development Report
+
+The development lifecycle of this project heavily integrated artificial intelligence tools to implement features rapidly, securely, and effectively.
+
+### Development Velocity (Fast)
+- **Rapid Prototyping:** AI assisted in bootstrapping the Django backend and frontend structure and configuring model architectures.
+- **Automated Testing:** Accelerated the creation of the Playwright E2E testing suite by generating comprehensive user flows and mocked SSE response scenarios.
+
+### Security and Quality Assurance (Secure)
+- **Code Auditing:** AI-driven analysis was used to identify potential security vulnerabilities, particularly in JWT validation, SQL query safety, and rate-limiting enforcement.
+- **Robustness Checks:** Formulated the fail-open moderation architecture, ensuring that network or API failures do not compromise chat availability.
+
+### Effective Integration (Effective)
+- **Complex Logic Solutions:** Resolved intricate features such as the debt-simplification algorithm and Server-Sent Events (SSE) streaming for the Concierge chatbot.
+- **Service Coordination:** Streamlined integration with external services (such as the Frankfurter currency API caching) and asynchronous task queues (Celery + Redis).
