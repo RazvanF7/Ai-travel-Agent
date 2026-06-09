@@ -107,7 +107,7 @@ AI Travel Hub is a collaborative trip-planning platform powered by AI agents. It
 
 ## AI Agents
 
-The platform's intelligence is driven by three specialized AI agents, each with a focused responsibility. All agents communicate through an OpenAI-compatible API and are located in the `backend/ai_agents/` module.
+The platform's intelligence is driven by two AI agents, each with a focused responsibility. All agents communicate through an OpenAI-compatible API and are located in the `backend/ai_agents/` module.
 
 ### Architecture Overview
 
@@ -117,9 +117,8 @@ User Request
      v
  [Rate Limiter]  ──  3 req/min, 10 req/hour per user
      |
-     ├──> Pathfinder Agent    (itinerary generation)
-     ├──> Concierge Agent     (in-trip assistance)
-     └──> Moderator Agent     (chat moderation)
+     ├──> Travel Assistant Agent   (planning + in-trip assistance)
+     └──> Moderator Agent          (chat moderation)
            |
            v
    LLM Backend (OpenAI-compatible API)
@@ -127,9 +126,13 @@ User Request
 
 All AI endpoints are JWT-protected and rate-limited. The rate limiter enforces **3 requests per minute** and **10 requests per hour** per user, returning a `429` response with a `retry_after` value when exceeded.
 
-### Pathfinder -- Itinerary Generation
+### Travel Assistant -- Planning & In-Trip Assistance
 
-**Purpose:** Generates complete day-by-day travel itineraries from a text prompt.
+The Travel Assistant is a single agent with two operating modes: **Pathfinder** (pre-trip itinerary generation) and **Concierge** (real-time in-trip assistance). Both share the same LLM backend and trip context, but serve different stages of the travel experience.
+
+#### Pathfinder Mode -- Itinerary Generation
+
+Generates complete day-by-day travel itineraries from a text prompt.
 
 **How it works:**
 1. Receives destination, trip duration, budget, currency, and user preferences.
@@ -160,9 +163,9 @@ All AI endpoints are JWT-protected and rate-limited. The rate limiter enforces *
 
 **Supports both:** synchronous JSON response and async SSE streaming.
 
-### Concierge -- In-Trip Assistance
+#### Concierge Mode -- In-Trip Assistance
 
-**Purpose:** Real-time travel chatbot that provides local recommendations, emergency contacts, and travel tips during a trip.
+Real-time travel chatbot that provides local recommendations, emergency contacts, and travel tips during a trip.
 
 **How it works:**
 1. Builds a context string from the current trip (destination, dates, budget) and the last 5 messages of conversation history.
@@ -184,6 +187,8 @@ All AI endpoints are JWT-protected and rate-limited. The rate limiter enforces *
 | `token` | `{"type": "token", "content": "..."}` |
 | `complete` | `{"type": "complete", "full_text": "...", "has_suggestion": bool}` |
 | `error` | `{"type": "error", "message": "..."}` |
+
+Available both as a dedicated trip tab and as a floating chat widget on the landing page.
 
 ### Moderator -- Chat Moderation
 
