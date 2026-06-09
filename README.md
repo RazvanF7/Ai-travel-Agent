@@ -9,7 +9,7 @@ AI Travel Hub is a collaborative trip-planning platform powered by AI agents. It
 ## Table of Contents
 
 - [Main Functionalities](#main-functionalities)
-- [Live Demo & Website](#live-demo-website)
+- [Live Demo & Website](#live-demo--website)
 - [Tech Stack](#tech-stack)
 - [AI Agents](#ai-agents)
 - [Automated Tests](#automated-tests)
